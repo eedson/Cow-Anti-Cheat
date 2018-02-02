@@ -28,3 +28,11 @@ There is a config generated (/cfg/CowAntiCheat/CowAntiCheat.cfg)<br />
     Load the plugin manually, or change maps
     Edit the Config (/cfg/CowAntiCheat/CowAntiCheat.cfg)
     Watch the bans roll in!
+
+# ChangeLog
+## [1.10] - 2018-02-02
+### Added
+- Sourcebans++ Optional Dependency
+- Added AHK/MSL Strafe Detection
+- Added Cvars for AHK/MSL Strafe Detection
+- Added Support for older Sourcebans++ versions
