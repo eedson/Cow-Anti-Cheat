@@ -17,7 +17,7 @@ This plugin is designed to be a drag and drop anti-cheat. While making and testi
     AHK/MSL Strafe
 
 # ConVars
-There is a config generated (/cfg/CowAntiCheat/CowAntiCheat.cfg) \n
+There is a config generated (/cfg/CowAntiCheat/CowAntiCheat.cfg)<br />
 I highly recommend leaving ban/log thresholds at their current values to further avoid false positives.
 
 # Commands
