@@ -18,7 +18,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "CodingCow"
-#define PLUGIN_VERSION "1.10"
+#define PLUGIN_VERSION "1.11"
 
 #include <sourcemod>
 #include <sdktools>
@@ -73,6 +73,7 @@ int g_iStrafeCount[MAXPLAYERS + 1];
 bool turnRight[MAXPLAYERS + 1];
 int g_iTickCount[MAXPLAYERS + 1];
 int prev_mousedx[MAXPLAYERS + 1];
+int g_iAHKStrafeDetection[MAXPLAYERS + 1];
 int g_iMousedx_Value[MAXPLAYERS + 1];
 int g_iMousedxCount[MAXPLAYERS + 1];
 float g_fJumpPos[MAXPLAYERS + 1];
@@ -884,10 +885,16 @@ public void CheckAHKStrafe(int client, int mouse)
 				
 			if(g_iMousedxCount[client] >= g_ConVar_AHKStrafeLogThreshold.IntValue)
 			{
-				char message[128];
-				Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01detected for AHK Strafe", client);
-				PrintToAdmins(message);
 				g_iMousedxCount[client] = 0;
+				g_iAHKStrafeDetection[client]++;
+				
+				if(g_iAHKStrafeDetection[client] >= 10)
+				{
+					char message[128];
+					Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01detected for AHK Strafe (%i Infractions)", client, g_iAHKStrafeDetection[client]);
+					PrintToAdmins(message);
+					g_iAHKStrafeDetection[client] = 0;
+				}
 			}
 		}
 	}
@@ -939,6 +946,7 @@ public void SetDefaults(int client)
 	turnRight[client] = true;
 	g_iTickCount[client] = 0;
 	prev_mousedx[client] = 0;
+	g_iAHKStrafeDetection[client] = 0;
 	g_iMousedx_Value[client] = 0;
 	g_iMousedxCount[client] = 0;
 	g_fJumpPos[client] = 0.0;
