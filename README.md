@@ -36,3 +36,7 @@ There is a config generated (/cfg/CowAntiCheat/CowAntiCheat.cfg)<br />
 - Added AHK/MSL Strafe Detection
 - Added Cvars for AHK/MSL Strafe Detection
 - Added Support for older Sourcebans++ versions
+
+## [1.11] - 2018-02-03
+### Added
+- AHK/MSL Strafe Detection Updated.
