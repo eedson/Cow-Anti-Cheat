@@ -3,6 +3,7 @@ This plugin is designed to be a drag and drop anti-cheat. While making and testi
 
 # Dependencies
 - Sourcebans++ (optional)
+- SteamWorks (required)
 
 # Detections
     Aimbot
@@ -15,6 +16,7 @@ This plugin is designed to be a drag and drop anti-cheat. While making and testi
     Perfect Strafe
     Backtrack Elimination
     AHK/MSL Strafe
+    HourChecker
 
 # ConVars
 There is a config generated (/cfg/CowAntiCheat/CowAntiCheat.cfg)<br />
@@ -44,3 +46,8 @@ There is a config generated (/cfg/CowAntiCheat/CowAntiCheat.cfg)<br />
 ## [1.12] - 2018-02-03
 ### Added
 - Anti-Cheat Logging.
+
+## [1.13] - 2018-02-05
+### Added
+- HourChecker Added
+- SteamWorks Integration
