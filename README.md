@@ -40,3 +40,7 @@ There is a config generated (/cfg/CowAntiCheat/CowAntiCheat.cfg)<br />
 ## [1.11] - 2018-02-03
 ### Added
 - AHK/MSL Strafe Detection Updated.
+
+## [1.12] - 2018-02-03
+### Added
+- Anti-Cheat Logging.
