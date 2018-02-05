@@ -369,14 +369,20 @@ public Action Event_BombDefused(Handle event, const char[] name, bool dontBroadc
 	
 	if(GetEngineTime() - g_fDefuseTime[client] < 3.5 && g_ConVar_InstantDefuseEnable.BoolValue)
     {
-    	PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for Instant Defuse!", client);
+		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for Instant Defuse!", client);
+		
+		char date[32];
+		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
+		char log[128];
+		Format(log, sizeof(log), "[CowAC] %s | BAN | %N has been detected for Instant Defuse", date, client);
+		CowAC_Log(log);
     	
-    	if(sourcebans)
-        	SourceBans_BanPlayer(0, client, g_ConVar_InstantDefuseBanTime.IntValue, "[CowAC] Instant Defuse Detected.");
-        else
-        {
-        	BanClient(client, g_ConVar_InstantDefuseBanTime.IntValue, BANFLAG_AUTO, "[CowAC] Instant Defuse Detected.");
-      	}
+		if(sourcebans)
+			SourceBans_BanPlayer(0, client, g_ConVar_InstantDefuseBanTime.IntValue, "[CowAC] Instant Defuse Detected.");
+		else
+		{
+			BanClient(client, g_ConVar_InstantDefuseBanTime.IntValue, BANFLAG_AUTO, "[CowAC] Instant Defuse Detected.");
+		}
     }
 }
 
@@ -492,6 +498,12 @@ public void CheckAimbot(int client, int buttons, float angles[3])
   	{
   		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for Aimbot!", client);
   		
+  		char date[32];
+		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
+		char log[128];
+		Format(log, sizeof(log), "[CowAC] %s | BAN | %N has been detected for Aimbot (%i)", date, client, g_iAimbotCount[client]);
+		CowAC_Log(log);
+  		
   		if(sourcebans)
   			SourceBans_BanPlayer(0, client, g_ConVar_AimbotBanTime.IntValue, "[CowAC] Aimbot Detected.");
   		else
@@ -539,6 +551,12 @@ public void CheckBhop(int client, int buttons)
 	{
 		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for Bhop Assist!", client);
 		
+		char date[32];
+		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
+		char log[128];
+		Format(log, sizeof(log), "[CowAC] %s | BAN | %N has been detected for Bhop Assist (%i)", date, client, g_iPerfectBhopCount[client]);
+		CowAC_Log(log);
+		
 		if(sourcebans)
 			SourceBans_BanPlayer(0, client, g_ConVar_BhopBanTime.IntValue, "[CowAC] Bhop Assist Detected.");
 		else
@@ -579,6 +597,12 @@ public void CheckSidemoveCount(int client)
 	if(g_iPerfSidemove[client] >= g_ConVar_SilentStrafeBanThreshold.IntValue)
 	{
 		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for Silent-Strafe!", client);
+		
+		char date[32];
+		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
+		char log[128];
+		Format(log, sizeof(log), "[CowAC] %s | BAN | %N has been detected for Silent-Strafe (%i)", date, client, g_iPerfSidemove[client]);
+		CowAC_Log(log);
 		
 		if(sourcebans)
 			SourceBans_BanPlayer(0, client, g_ConVar_SilentStrafeBanTime.IntValue, "[CowAC] Silent-Strafe Detected.");
@@ -625,6 +649,12 @@ public void CheckTriggerBot(int client, int buttons, float angles[3])
 					char message[128];
 					Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01detected for \x10%i\x01 tick perfect shots.", client, g_iTriggerBotCount[client]);
 					PrintToAdmins(message);
+					
+					char date[32];
+					FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
+					char log[128];
+					Format(log, sizeof(log), "[CowAC] %s | LOG | %N has been detected for %i 1 tick perfect shots", date, client, g_iTriggerBotCount[client]);
+					CowAC_Log(log);
 				}
 				
 				g_iTriggerBotCount[client] = 0;
@@ -636,6 +666,12 @@ public void CheckTriggerBot(int client, int buttons, float angles[3])
 					char message[128];
 					Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01detected for \x10%i\x01 tick perfect shots.", client, g_iTriggerBotCount[client]);
 					PrintToAdmins(message);
+					
+					char date[32];
+					FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
+					char log[128];
+					Format(log, sizeof(log), "[CowAC] %s | LOG | %N has been detected for %i 1 tick perfect shots", date, client, g_iTriggerBotCount[client]);
+					CowAC_Log(log);
 				}
 				
 				g_iTriggerBotCount[client] = 0;
@@ -663,6 +699,12 @@ public void CheckTriggerBot(int client, int buttons, float angles[3])
   	{
   		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for TriggerBot / Smooth Aimbot!", client);
   		
+  		char date[32];
+		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
+		char log[128];
+		Format(log, sizeof(log), "[CowAC] %s | BAN | %N has been detected for TriggerBot / Smooth Aimbot (%i)", date, client, g_iTriggerBotCount[client]);
+		CowAC_Log(log);
+  		
   		if(sourcebans)
   			SourceBans_BanPlayer(0, client, g_ConVar_TriggerbotBanTime.IntValue, "[CowAC] TriggerBot / Smooth Aimbot Detected.");
   		else
@@ -679,7 +721,7 @@ public void CheckMacro(int client, int buttons)
 	float vec[3];
 	GetClientAbsOrigin(client, vec);
 	
-	if(buttons & IN_JUMP && !(prev_buttons[client] & IN_JUMP) && !(GetEntityFlags(client) & FL_ONGROUND) && vec[2] > g_fJumpStart[client])
+	if(buttons & IN_JUMP && !(prev_buttons[client] & IN_JUMP) && !(GetEntityFlags(client) & FL_ONGROUND) && !(GetEntityFlags(client) & FL_INWATER) && vec[2] > g_fJumpStart[client])
 	{
 		g_iMacroCount[client]++;
 	}
@@ -690,6 +732,12 @@ public void CheckMacro(int client, int buttons)
 			char message[128];
 			Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01has been detected for Macro / Hyperscroll (\x04%i\x01)!", client, g_iMacroCount[client]);
 			PrintToAdmins(message);
+			
+			char date[32];
+			FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
+			char log[128];
+			Format(log, sizeof(log), "[CowAC] %s | LOG | %N has been detected for Macro / Hyperscroll (%i)", date, client, g_iMacroCount[client]);
+			CowAC_Log(log);
 			
 			g_iMacroDetectionCount[client]++;
 			
@@ -738,6 +786,12 @@ public void CheckAutoShoot(int client, int buttons)
 				char message[128];
 				Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01has been detected for AutoShoot Script (\x04%i\x01)!", client, g_iAutoShoot[client]);
 				PrintToAdmins(message);
+				
+				char date[32];
+				FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
+				char log[128];
+				Format(log, sizeof(log), "[CowAC] %s | LOG | %N has been detected for AutoShoot Script (%i)", date, client, g_iAutoShoot[client]);
+				CowAC_Log(log);
 			}
 			
 			g_iAutoShoot[client] = 0;
@@ -800,6 +854,12 @@ public void CheckPerfectStrafe(int client, int mousedx, int buttons)
 				char message[128];
 				Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01detected for \x10%i\x01 Consistant Perfect Strafes.", client, g_iStrafeCount[client]);
 				PrintToAdmins(message);
+				
+				char date[32];
+				FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
+				char log[128];
+				Format(log, sizeof(log), "[CowAC] %s | LOG | %N has been detected for Consistant Perfect Strafes (%i)", date, client, g_iStrafeCount[client]);
+				CowAC_Log(log);
 			}
 			
 			g_iStrafeCount[client] = 0;
@@ -822,6 +882,12 @@ public void CheckPerfectStrafe(int client, int mousedx, int buttons)
 				char message[128];
 				Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01detected for \x10%i\x01 Consistant Perfect Strafes.", client, g_iStrafeCount[client]);
 				PrintToAdmins(message);
+				
+				char date[32];
+				FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
+				char log[128];
+				Format(log, sizeof(log), "[CowAC] %s | LOG | %N has been detected for Consistant Perfect Strafes (%i)", date, client, g_iStrafeCount[client]);
+				CowAC_Log(log);
 			}
 			
 			g_iStrafeCount[client] = 0;
@@ -836,6 +902,12 @@ public void CheckPerfCount(int client)
 	if(g_iStrafeCount[client] >= g_ConVar_PerfectStrafeBanThreshold.IntValue)
 	{
 		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for Consistant Perfect Strafes (%i)!", client, g_iStrafeCount[client]);
+		
+		char date[32];
+		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
+		char log[128];
+		Format(log, sizeof(log), "[CowAC] %s | BAN | %N has been detected for Consistant Perfect Strafes (%i)", date, client, g_iStrafeCount[client]);
+		CowAC_Log(log);
 		
 		if(sourcebans)
 			SourceBans_BanPlayer(0, client, g_ConVar_PerfectStrafeBanTime.IntValue, "[CowAC] Consistant Perfect Strafes Detected.");
@@ -893,6 +965,12 @@ public void CheckAHKStrafe(int client, int mouse)
 					char message[128];
 					Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01detected for AHK Strafe (%i Infractions)", client, g_iAHKStrafeDetection[client]);
 					PrintToAdmins(message);
+					
+					char date[32];
+					FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
+					char log[128];
+					Format(log, sizeof(log), "[CowAC] %s | LOG | %N has been detected for AHK Strafe (%i Infractions)", date, client, g_iAHKStrafeDetection[client]);
+					CowAC_Log(log);
 					g_iAHKStrafeDetection[client] = 0;
 				}
 			}
@@ -989,6 +1067,13 @@ public void PrintToCow(int client, const char[] message)
 	{
 		PrintToChat(client, message);
 	}
+}
+
+public void CowAC_Log(char[] message)
+{
+	Handle logFile = OpenFile("addons/sourcemod/logs/CowAC_Log.txt", "a");
+	WriteFileLine(logFile, message);
+	delete logFile;
 }
 
 bool IsValidClient(int client, bool bAllowBots = false, bool bAllowDead = true)
