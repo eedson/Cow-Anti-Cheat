@@ -18,11 +18,12 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "CodingCow"
-#define PLUGIN_VERSION "1.12"
+#define PLUGIN_VERSION "1.13"
 
 #include <sourcemod>
 #include <sdktools>
 #include <autoexecconfig>
+#include <SteamWorks>
 #undef REQUIRE_PLUGIN
 #include <sourcebans>
 
@@ -94,6 +95,8 @@ ConVar g_ConVar_InstantDefuseEnable;
 ConVar g_ConVar_PerfectStrafeEnable;
 ConVar g_ConVar_BacktrackFixEnable;
 ConVar g_ConVar_AHKStrafeEnable;
+ConVar g_ConVar_HourCheckEnable;
+ConVar g_ConVar_HourCheckValue;
 
 /* Detection Thresholds Cvars */
 ConVar g_ConVar_AimbotBanThreshold;
@@ -133,6 +136,8 @@ public void OnPluginStart()
 	g_ConVar_PerfectStrafeEnable = AutoExecConfig_CreateConVar("ac_perfectstrafe", "1", "Enable perfect strafe detection (bans/logs) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_ConVar_BacktrackFixEnable = AutoExecConfig_CreateConVar("ac_backtrack", "1", "Enable backtrack elimination (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_ConVar_AHKStrafeEnable = AutoExecConfig_CreateConVar("ac_ahkstrafe", "1", "Enable AHK strafe detection (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	g_ConVar_HourCheckEnable = AutoExecConfig_CreateConVar("ac_hourcheck", "0", "Enable hour checker (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	g_ConVar_HourCheckValue = AutoExecConfig_CreateConVar("ac_hourcheck_value", "50", "Minimum amount of playtime a user has to have on CS:GO (Default: 50)");
 	
 	g_ConVar_AimbotBanThreshold = AutoExecConfig_CreateConVar("ac_aimbot_ban_threshold", "5", "Threshold for aimbot ban detection (Default: 5)");
 	g_ConVar_BhopBanThreshold = AutoExecConfig_CreateConVar("ac_bhop_ban_threshold", "10", "Threshold for bhop ban detection (Default: 10)");
@@ -191,6 +196,12 @@ public void OnLibraryAdded(const char[] name)
 public void OnClientPutInServer(int client)
 {
 	SetDefaults(client);
+	
+	if(g_ConVar_HourCheckEnable.BoolValue)
+	{
+		Handle request = CreateRequest_TimePlayed(client);
+		SteamWorks_SendHTTPRequest(request);
+	}
 }
 
 /* Command Callbacks */
@@ -976,6 +987,45 @@ public void CheckAHKStrafe(int client, int mouse)
 			}
 		}
 	}
+}
+
+Handle CreateRequest_TimePlayed(int client)
+{
+	char request_url[256];
+	Format(request_url, sizeof(request_url), "http://www.cowanticheat.com/CheckTime.php");
+	Handle request = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, request_url);
+	
+	char steamid[64];
+	GetClientAuthId(client, AuthId_SteamID64, steamid, sizeof(steamid));
+	
+	SteamWorks_SetHTTPRequestGetOrPostParameter(request, "steamid", steamid);
+	SteamWorks_SetHTTPRequestContextValue(request, client);
+	SteamWorks_SetHTTPCallbacks(request, TimePlayed_OnHTTPResponse);
+	return request;
+}
+
+public int TimePlayed_OnHTTPResponse(Handle request, bool bFailure, bool bRequestSuccessful, EHTTPStatusCode eStatusCode, int client)
+{
+	if (!bRequestSuccessful || eStatusCode != k_EHTTPStatusCode200OK)
+	{
+		delete request;
+		return;
+	}
+
+	int iBufferSize;
+	SteamWorks_GetHTTPResponseBodySize(request, iBufferSize);
+	
+	char[] sBody = new char[iBufferSize];
+	SteamWorks_GetHTTPResponseBodyData(request, sBody, iBufferSize);
+	
+	int time = StringToInt(sBody, 10) / 60 / 60;
+	
+	if(time < g_ConVar_HourCheckValue.IntValue)
+	{
+		KickClient(client, "[CowAC] You do not meet the minimum hour requirement to play here! (%i/%i)", time, g_ConVar_HourCheckValue.IntValue);
+	}
+	
+	delete request;
 }
 
 public bool TraceEntityFilterPlayer(int entity, int mask, any data)
