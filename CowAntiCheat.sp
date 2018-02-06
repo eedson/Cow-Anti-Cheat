@@ -1020,7 +1020,11 @@ public int TimePlayed_OnHTTPResponse(Handle request, bool bFailure, bool bReques
 	
 	int time = StringToInt(sBody, 10) / 60 / 60;
 	
-	if(time < g_ConVar_HourCheckValue.IntValue)
+	if(time <= 0)
+	{
+		KickClient(client, "[CowAC] Please connect with a public steam profile.");
+	}
+	else if(time < g_ConVar_HourCheckValue.IntValue)
 	{
 		KickClient(client, "[CowAC] You do not meet the minimum hour requirement to play here! (%i/%i)", time, g_ConVar_HourCheckValue.IntValue);
 	}
