@@ -51,3 +51,8 @@ There is a config generated (/cfg/CowAntiCheat/CowAntiCheat.cfg)<br />
 ### Added
 - HourChecker Added
 - SteamWorks Integration
+
+## [1.14] - 2018-02-07
+### Added
+- ProfileChecker Added
+- Steamid Added to logs
