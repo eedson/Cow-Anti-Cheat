@@ -17,6 +17,7 @@ This plugin is designed to be a drag and drop anti-cheat. While making and testi
     Backtrack Elimination
     AHK/MSL Strafe
     HourChecker (Kicks Private Profiles)
+    ProfileChecker
 
 # ConVars
 There is a config generated (/cfg/CowAntiCheat/CowAntiCheat.cfg)<br />
