@@ -18,7 +18,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "CodingCow"
-#define PLUGIN_VERSION "1.13"
+#define PLUGIN_VERSION "1.14"
 
 #include <sourcemod>
 #include <sdktools>
@@ -97,6 +97,7 @@ ConVar g_ConVar_BacktrackFixEnable;
 ConVar g_ConVar_AHKStrafeEnable;
 ConVar g_ConVar_HourCheckEnable;
 ConVar g_ConVar_HourCheckValue;
+ConVar g_ConVar_ProfileCheckEnable;
 
 /* Detection Thresholds Cvars */
 ConVar g_ConVar_AimbotBanThreshold;
@@ -138,6 +139,7 @@ public void OnPluginStart()
 	g_ConVar_AHKStrafeEnable = AutoExecConfig_CreateConVar("ac_ahkstrafe", "1", "Enable AHK strafe detection (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_ConVar_HourCheckEnable = AutoExecConfig_CreateConVar("ac_hourcheck", "0", "Enable hour checker (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_ConVar_HourCheckValue = AutoExecConfig_CreateConVar("ac_hourcheck_value", "50", "Minimum amount of playtime a user has to have on CS:GO (Default: 50)");
+	g_ConVar_ProfileCheckEnable = AutoExecConfig_CreateConVar("ac_profilecheck", "0", "Enable profile checker, this makes it so users need to have a public profile to connect. (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	
 	g_ConVar_AimbotBanThreshold = AutoExecConfig_CreateConVar("ac_aimbot_ban_threshold", "5", "Threshold for aimbot ban detection (Default: 5)");
 	g_ConVar_BhopBanThreshold = AutoExecConfig_CreateConVar("ac_bhop_ban_threshold", "10", "Threshold for bhop ban detection (Default: 10)");
@@ -197,6 +199,11 @@ public void OnClientPutInServer(int client)
 {
 	SetDefaults(client);
 	
+	if(g_ConVar_ProfileCheckEnable.BoolValue)
+	{
+		Handle request = CreateRequest_ProfileStatus(client);
+		SteamWorks_SendHTTPRequest(request);
+	}
 	if(g_ConVar_HourCheckEnable.BoolValue)
 	{
 		Handle request = CreateRequest_TimePlayed(client);
@@ -382,10 +389,10 @@ public Action Event_BombDefused(Handle event, const char[] name, bool dontBroadc
     {
 		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for Instant Defuse!", client);
 		
-		char date[32];
+		char date[32], log[128], steamid[64];
+		GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
-		char log[128];
-		Format(log, sizeof(log), "[CowAC] %s | BAN | %N has been detected for Instant Defuse", date, client);
+		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Instant Defuse", date, client, steamid);
 		CowAC_Log(log);
     	
 		if(sourcebans)
@@ -509,10 +516,10 @@ public void CheckAimbot(int client, int buttons, float angles[3])
   	{
   		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for Aimbot!", client);
   		
-  		char date[32];
+  		char date[32], log[128], steamid[64];
+  		GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
-		char log[128];
-		Format(log, sizeof(log), "[CowAC] %s | BAN | %N has been detected for Aimbot (%i)", date, client, g_iAimbotCount[client]);
+		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Aimbot (%i)", date, client, steamid, g_iAimbotCount[client]);
 		CowAC_Log(log);
   		
   		if(sourcebans)
@@ -562,10 +569,10 @@ public void CheckBhop(int client, int buttons)
 	{
 		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for Bhop Assist!", client);
 		
-		char date[32];
+		char date[32], log[128], steamid[64];
+		GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
-		char log[128];
-		Format(log, sizeof(log), "[CowAC] %s | BAN | %N has been detected for Bhop Assist (%i)", date, client, g_iPerfectBhopCount[client]);
+		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Bhop Assist (%i)", date, client, steamid, g_iPerfectBhopCount[client]);
 		CowAC_Log(log);
 		
 		if(sourcebans)
@@ -609,10 +616,10 @@ public void CheckSidemoveCount(int client)
 	{
 		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for Silent-Strafe!", client);
 		
-		char date[32];
+		char date[32], log[128], steamid[64];
+		GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
-		char log[128];
-		Format(log, sizeof(log), "[CowAC] %s | BAN | %N has been detected for Silent-Strafe (%i)", date, client, g_iPerfSidemove[client]);
+		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Silent-Strafe (%i)", date, client, steamid, g_iPerfSidemove[client]);
 		CowAC_Log(log);
 		
 		if(sourcebans)
@@ -661,10 +668,10 @@ public void CheckTriggerBot(int client, int buttons, float angles[3])
 					Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01detected for \x10%i\x01 tick perfect shots.", client, g_iTriggerBotCount[client]);
 					PrintToAdmins(message);
 					
-					char date[32];
+					char date[32], log[128], steamid[64];
+					GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 					FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
-					char log[128];
-					Format(log, sizeof(log), "[CowAC] %s | LOG | %N has been detected for %i 1 tick perfect shots", date, client, g_iTriggerBotCount[client]);
+					Format(log, sizeof(log), "[CowAC] %s | LOG | %N (%s) has been detected for %i 1 tick perfect shots", date, client, steamid, g_iTriggerBotCount[client]);
 					CowAC_Log(log);
 				}
 				
@@ -678,10 +685,10 @@ public void CheckTriggerBot(int client, int buttons, float angles[3])
 					Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01detected for \x10%i\x01 tick perfect shots.", client, g_iTriggerBotCount[client]);
 					PrintToAdmins(message);
 					
-					char date[32];
+					char date[32], log[128], steamid[64];
+					GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 					FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
-					char log[128];
-					Format(log, sizeof(log), "[CowAC] %s | LOG | %N has been detected for %i 1 tick perfect shots", date, client, g_iTriggerBotCount[client]);
+					Format(log, sizeof(log), "[CowAC] %s | LOG | %N (%s) has been detected for %i 1 tick perfect shots", date, client, steamid, g_iTriggerBotCount[client]);
 					CowAC_Log(log);
 				}
 				
@@ -710,10 +717,10 @@ public void CheckTriggerBot(int client, int buttons, float angles[3])
   	{
   		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for TriggerBot / Smooth Aimbot!", client);
   		
-  		char date[32];
+  		char date[32], log[128], steamid[64];
+  		GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
-		char log[128];
-		Format(log, sizeof(log), "[CowAC] %s | BAN | %N has been detected for TriggerBot / Smooth Aimbot (%i)", date, client, g_iTriggerBotCount[client]);
+		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for TriggerBot / Smooth Aimbot (%i)", date, client, steamid, g_iTriggerBotCount[client]);
 		CowAC_Log(log);
   		
   		if(sourcebans)
@@ -744,10 +751,10 @@ public void CheckMacro(int client, int buttons)
 			Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01has been detected for Macro / Hyperscroll (\x04%i\x01)!", client, g_iMacroCount[client]);
 			PrintToAdmins(message);
 			
-			char date[32];
+			char date[32], log[128], steamid[64];
+			GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 			FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
-			char log[128];
-			Format(log, sizeof(log), "[CowAC] %s | LOG | %N has been detected for Macro / Hyperscroll (%i)", date, client, g_iMacroCount[client]);
+			Format(log, sizeof(log), "[CowAC] %s | LOG | %N (%s) has been detected for Macro / Hyperscroll (%i)", date, client, steamid, g_iMacroCount[client]);
 			CowAC_Log(log);
 			
 			g_iMacroDetectionCount[client]++;
@@ -798,10 +805,10 @@ public void CheckAutoShoot(int client, int buttons)
 				Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01has been detected for AutoShoot Script (\x04%i\x01)!", client, g_iAutoShoot[client]);
 				PrintToAdmins(message);
 				
-				char date[32];
+				char date[32], log[128], steamid[64];
+				GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 				FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
-				char log[128];
-				Format(log, sizeof(log), "[CowAC] %s | LOG | %N has been detected for AutoShoot Script (%i)", date, client, g_iAutoShoot[client]);
+				Format(log, sizeof(log), "[CowAC] %s | LOG | %N (%s) has been detected for AutoShoot Script (%i)", date, client, steamid, g_iAutoShoot[client]);
 				CowAC_Log(log);
 			}
 			
@@ -866,10 +873,10 @@ public void CheckPerfectStrafe(int client, int mousedx, int buttons)
 				Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01detected for \x10%i\x01 Consistant Perfect Strafes.", client, g_iStrafeCount[client]);
 				PrintToAdmins(message);
 				
-				char date[32];
+				char date[32], log[128], steamid[64];
+				GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 				FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
-				char log[128];
-				Format(log, sizeof(log), "[CowAC] %s | LOG | %N has been detected for Consistant Perfect Strafes (%i)", date, client, g_iStrafeCount[client]);
+				Format(log, sizeof(log), "[CowAC] %s | LOG | %N (%s) has been detected for Consistant Perfect Strafes (%i)", date, client, steamid, g_iStrafeCount[client]);
 				CowAC_Log(log);
 			}
 			
@@ -894,10 +901,10 @@ public void CheckPerfectStrafe(int client, int mousedx, int buttons)
 				Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01detected for \x10%i\x01 Consistant Perfect Strafes.", client, g_iStrafeCount[client]);
 				PrintToAdmins(message);
 				
-				char date[32];
+				char date[32], log[128], steamid[64];
+				GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 				FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
-				char log[128];
-				Format(log, sizeof(log), "[CowAC] %s | LOG | %N has been detected for Consistant Perfect Strafes (%i)", date, client, g_iStrafeCount[client]);
+				Format(log, sizeof(log), "[CowAC] %s | LOG | %N (%s) has been detected for Consistant Perfect Strafes (%i)", date, client, steamid, g_iStrafeCount[client]);
 				CowAC_Log(log);
 			}
 			
@@ -914,10 +921,10 @@ public void CheckPerfCount(int client)
 	{
 		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for Consistant Perfect Strafes (%i)!", client, g_iStrafeCount[client]);
 		
-		char date[32];
+		char date[32], log[128], steamid[64];
+		GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
-		char log[128];
-		Format(log, sizeof(log), "[CowAC] %s | BAN | %N has been detected for Consistant Perfect Strafes (%i)", date, client, g_iStrafeCount[client]);
+		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Consistant Perfect Strafes (%i)", date, client, steamid, g_iStrafeCount[client]);
 		CowAC_Log(log);
 		
 		if(sourcebans)
@@ -977,10 +984,10 @@ public void CheckAHKStrafe(int client, int mouse)
 					Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01detected for AHK Strafe (%i Infractions)", client, g_iAHKStrafeDetection[client]);
 					PrintToAdmins(message);
 					
-					char date[32];
+					char date[32], log[128], steamid[64];
+					GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 					FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
-					char log[128];
-					Format(log, sizeof(log), "[CowAC] %s | LOG | %N has been detected for AHK Strafe (%i Infractions)", date, client, g_iAHKStrafeDetection[client]);
+					Format(log, sizeof(log), "[CowAC] %s | LOG | %N (%s) has been detected for AHK Strafe (%i Infractions)", date, client, steamid, g_iAHKStrafeDetection[client]);
 					CowAC_Log(log);
 					g_iAHKStrafeDetection[client] = 0;
 				}
@@ -1027,6 +1034,45 @@ public int TimePlayed_OnHTTPResponse(Handle request, bool bFailure, bool bReques
 	else if(time < g_ConVar_HourCheckValue.IntValue)
 	{
 		KickClient(client, "[CowAC] You do not meet the minimum hour requirement to play here! (%i/%i)", time, g_ConVar_HourCheckValue.IntValue);
+	}
+	
+	delete request;
+}
+
+Handle CreateRequest_ProfileStatus(int client)
+{
+	char request_url[256];
+	Format(request_url, sizeof(request_url), "http://www.cowanticheat.com/CheckProfile.php");
+	Handle request = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, request_url);
+	
+	char steamid[64];
+	GetClientAuthId(client, AuthId_SteamID64, steamid, sizeof(steamid));
+	
+	SteamWorks_SetHTTPRequestGetOrPostParameter(request, "steamid", steamid);
+	SteamWorks_SetHTTPRequestContextValue(request, client);
+	SteamWorks_SetHTTPCallbacks(request, ProfileStatus_OnHTTPResponse);
+	return request;
+}
+
+public int ProfileStatus_OnHTTPResponse(Handle request, bool bFailure, bool bRequestSuccessful, EHTTPStatusCode eStatusCode, int client)
+{
+	if (!bRequestSuccessful || eStatusCode != k_EHTTPStatusCode200OK)
+	{
+		delete request;
+		return;
+	}
+
+	int iBufferSize;
+	SteamWorks_GetHTTPResponseBodySize(request, iBufferSize);
+	
+	char[] sBody = new char[iBufferSize];
+	SteamWorks_GetHTTPResponseBodyData(request, sBody, iBufferSize);
+	
+	int profile = StringToInt(sBody, 10) / 60 / 60;
+	
+	if(profile < 3)
+	{
+		KickClient(client, "[CowAC] Please connect with a public steam profile.");
 	}
 	
 	delete request;
