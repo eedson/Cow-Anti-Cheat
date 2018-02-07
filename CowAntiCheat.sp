@@ -394,13 +394,8 @@ public Action Event_BombDefused(Handle event, const char[] name, bool dontBroadc
 		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
 		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Instant Defuse", date, client, steamid);
 		CowAC_Log(log);
-    	
-		if(sourcebans)
-			SourceBans_BanPlayer(0, client, g_ConVar_InstantDefuseBanTime.IntValue, "[CowAC] Instant Defuse Detected.");
-		else
-		{
-			BanClient(client, g_ConVar_InstantDefuseBanTime.IntValue, BANFLAG_AUTO, "[CowAC] Instant Defuse Detected.");
-		}
+
+		UTIL_BanClient(client, g_ConVar_InstantDefuseBanTime.IntValue, "[CowAC] Instant Defuse Detected.");
     }
 }
 
@@ -522,13 +517,7 @@ public void CheckAimbot(int client, int buttons, float angles[3])
 		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Aimbot (%i)", date, client, steamid, g_iAimbotCount[client]);
 		CowAC_Log(log);
   		
-  		if(sourcebans)
-  			SourceBans_BanPlayer(0, client, g_ConVar_AimbotBanTime.IntValue, "[CowAC] Aimbot Detected.");
-  		else
-        {
-       		BanClient(client, g_ConVar_AimbotBanTime.IntValue, BANFLAG_AUTO, "[CowAC] Aimbot Detected.");
-      	}
-  		
+  		UTIL_BanClient(client, g_ConVar_AimbotBanTime.IntValue, "[CowAC] Aimbot Detected.");  		
   		g_iAimbotCount[client] = 0;
  	}
 }
@@ -575,13 +564,7 @@ public void CheckBhop(int client, int buttons)
 		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Bhop Assist (%i)", date, client, steamid, g_iPerfectBhopCount[client]);
 		CowAC_Log(log);
 		
-		if(sourcebans)
-			SourceBans_BanPlayer(0, client, g_ConVar_BhopBanTime.IntValue, "[CowAC] Bhop Assist Detected.");
-		else
-        {
-       		BanClient(client, g_ConVar_BhopBanTime.IntValue, BANFLAG_AUTO, "[CowAC] Bhop Assist Detected.");
-      	}
-		
+		UTIL_BanClient(client, g_ConVar_BhopBanTime.IntValue, "[CowAC] Bhop Assist Detected.");		
 		g_iPerfectBhopCount[client] = 0;
 	}
 }
@@ -621,13 +604,8 @@ public void CheckSidemoveCount(int client)
 		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
 		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Silent-Strafe (%i)", date, client, steamid, g_iPerfSidemove[client]);
 		CowAC_Log(log);
-		
-		if(sourcebans)
-			SourceBans_BanPlayer(0, client, g_ConVar_SilentStrafeBanTime.IntValue, "[CowAC] Silent-Strafe Detected.");
-		else
-        {
-       		BanClient(client, g_ConVar_SilentStrafeBanTime.IntValue, BANFLAG_AUTO, "[CowAC] Silent-Strafe Detected.");
-      	}
+
+		UTIL_BanClient(client, g_ConVar_SilentStrafeBanTime.IntValue, "[CowAC] Silent-Strafe Detected.");
 	}
 			
 	g_iPerfSidemove[client] = 0;
@@ -722,14 +700,8 @@ public void CheckTriggerBot(int client, int buttons, float angles[3])
 		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
 		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for TriggerBot / Smooth Aimbot (%i)", date, client, steamid, g_iTriggerBotCount[client]);
 		CowAC_Log(log);
-  		
-  		if(sourcebans)
-  			SourceBans_BanPlayer(0, client, g_ConVar_TriggerbotBanTime.IntValue, "[CowAC] TriggerBot / Smooth Aimbot Detected.");
-  		else
-        {
-       		BanClient(client, g_ConVar_TriggerbotBanTime.IntValue, BANFLAG_AUTO, "[CowAC] TriggerBot / Smooth Aimbot Detected.");
-      	}
-      	
+
+		UTIL_BanClient(client, g_ConVar_TriggerbotBanTime.IntValue, "[CowAC] TriggerBot / Smooth Aimbot Detected.");      	
   		g_iTriggerBotCount[client] = 0;
  	}
 }
@@ -927,13 +899,7 @@ public void CheckPerfCount(int client)
 		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Consistant Perfect Strafes (%i)", date, client, steamid, g_iStrafeCount[client]);
 		CowAC_Log(log);
 		
-		if(sourcebans)
-			SourceBans_BanPlayer(0, client, g_ConVar_PerfectStrafeBanTime.IntValue, "[CowAC] Consistant Perfect Strafes Detected.");
-		else
-        {
-       		BanClient(client, g_ConVar_PerfectStrafeBanTime.IntValue, BANFLAG_AUTO, "[CowAC] Consistant Perfect Strafes Detected.");
-      	}
-      	
+		UTIL_BanClient(client, g_ConVar_PerfectStrafeBanTime.IntValue, "[CowAC] Consistant Perfect Strafes Detected.");
 		g_iStrafeCount[client] = 0;
 	}
 }
@@ -1213,4 +1179,12 @@ public float GetClientVelocity(int client, bool UseX, bool UseY, bool UseZ)
     }
    
     return GetVectorLength(vVel);
+}
+
+void UTIL_BanClient(int iTarget, int iTime, char[] szReason) {
+	if (sourcebans) {
+		SourceBans_BanPlayer(0, iTarget, iTime, szReason);
+	} else {
+		BanClient(iTarget, iTime, BANFLAG_AUTO, szReason);
+	}
 }
