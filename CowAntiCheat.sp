@@ -199,15 +199,18 @@ public void OnClientPutInServer(int client)
 {
 	SetDefaults(client);
 	
-	if(g_ConVar_ProfileCheckEnable.BoolValue)
+	if(IsValidClient(client))
 	{
-		Handle request = CreateRequest_ProfileStatus(client);
-		SteamWorks_SendHTTPRequest(request);
-	}
-	if(g_ConVar_HourCheckEnable.BoolValue)
-	{
-		Handle request = CreateRequest_TimePlayed(client);
-		SteamWorks_SendHTTPRequest(request);
+		if(g_ConVar_ProfileCheckEnable.BoolValue)
+		{
+			Handle request = CreateRequest_ProfileStatus(client);
+			SteamWorks_SendHTTPRequest(request);
+		}
+		if(g_ConVar_HourCheckEnable.BoolValue)
+		{
+			Handle request = CreateRequest_TimePlayed(client);
+			SteamWorks_SendHTTPRequest(request);
+		}
 	}
 }
 
@@ -403,8 +406,21 @@ public Action OnPlayerRunCmd(int client, int &iButtons, int &iImpulse, float fVe
 {
 	if(!IsFakeClient(client) && IsValidClient(client) && IsPlayerAlive(client))
 	{
+		float vOrigin[3], AnglesVec[3], EndPoint[3];
+	
+		float Distance = 999999.0;
+		
+		GetClientEyePosition(client,vOrigin);
+		GetAngleVectors(fAngles, AnglesVec, NULL_VECTOR, NULL_VECTOR);
+		
+		EndPoint[0] = vOrigin[0] + (AnglesVec[0]*Distance);
+		EndPoint[1] = vOrigin[1] + (AnglesVec[1]*Distance);
+		EndPoint[2] = vOrigin[2] + (AnglesVec[2]*Distance);
+		
+		Handle trace = TR_TraceRayFilterEx(vOrigin, EndPoint, MASK_SHOT, RayType_EndPoint, TraceEntityFilterPlayer, client);
+		
 		if(g_ConVar_AimbotEnable.BoolValue)
-			CheckAimbot(client, iButtons, fAngles);
+			CheckAimbot(client, iButtons, fAngles, trace);
 		
 		if(g_ConVar_BhopEnable.BoolValue && !g_ConVar_AutoBhop.BoolValue && !g_bAutoBhopEnabled[client])
 			CheckBhop(client, iButtons);
@@ -413,7 +429,7 @@ public Action OnPlayerRunCmd(int client, int &iButtons, int &iImpulse, float fVe
 			CheckSilentStrafe(client, fVelocity[1]);
 		
 		if(g_ConVar_TriggerbotEnable.BoolValue)
-			CheckTriggerBot(client, iButtons, fAngles);
+			CheckTriggerBot(client, iButtons, trace);
 		
 		if(g_ConVar_MacroEnable.BoolValue)
 			CheckMacro(client, iButtons);
@@ -428,6 +444,8 @@ public Action OnPlayerRunCmd(int client, int &iButtons, int &iImpulse, float fVe
 			CheckAHKStrafe(client, mouse[0]);
 		
 		//CheckWallTrace(client, fAngles);
+		
+		delete trace;
 		
 		prev_OnGround[client] = (GetEntityFlags(client) & FL_ONGROUND) == FL_ONGROUND;
 		
@@ -453,7 +471,7 @@ public Action OnPlayerRunCmd(int client, int &iButtons, int &iImpulse, float fVe
 		return Plugin_Continue;
 }
 
-public void CheckAimbot(int client, int buttons, float angles[3])
+public void CheckAimbot(int client, int buttons, float angles[3], Handle trace)
 {
 	// Prevent incredibly high sensitivity from causing detections
 	if(FloatAbs(g_Sensitivity[client] * g_mYaw[client]) > 0.6)
@@ -467,19 +485,6 @@ public void CheckAimbot(int client, int buttons, float angles[3])
 	}
 	
 	float delta = NormalizeAngle(angles[1] - prev_angles[client][1]);
-
-	float vOrigin[3], AnglesVec[3], EndPoint[3];
-
-	float Distance = 999999.0;
-	
-	GetClientEyePosition(client,vOrigin);
-	GetAngleVectors(angles, AnglesVec, NULL_VECTOR, NULL_VECTOR);
-	
-	EndPoint[0] = vOrigin[0] + (AnglesVec[0]*Distance);
-	EndPoint[1] = vOrigin[1] + (AnglesVec[1]*Distance);
-	EndPoint[2] = vOrigin[2] + (AnglesVec[2]*Distance);
-	
-	Handle trace = TR_TraceRayFilterEx(vOrigin, EndPoint, MASK_SHOT, RayType_EndPoint, TraceEntityFilterPlayer, client);
 
 	if (TR_DidHit(trace))
 	{
@@ -504,8 +509,6 @@ public void CheckAimbot(int client, int buttons, float angles[3])
 			}
 		}
 	}
-	
-	delete trace;
   	
   	if(g_iAimbotCount[client] >= g_ConVar_AimbotBanThreshold.IntValue)
   	{
@@ -611,21 +614,8 @@ public void CheckSidemoveCount(int client)
 	g_iPerfSidemove[client] = 0;
 }
 
-public void CheckTriggerBot(int client, int buttons, float angles[3])
+public void CheckTriggerBot(int client, int buttons, Handle trace)
 {
-	float vOrigin[3], AnglesVec[3], EndPoint[3];
-	
-	float Distance = 999999.0;
-	
-	GetClientEyePosition(client,vOrigin);
-	GetAngleVectors(angles, AnglesVec, NULL_VECTOR, NULL_VECTOR);
-	
-	EndPoint[0] = vOrigin[0] + (AnglesVec[0]*Distance);
-	EndPoint[1] = vOrigin[1] + (AnglesVec[1]*Distance);
-	EndPoint[2] = vOrigin[2] + (AnglesVec[2]*Distance);
-	
-	Handle trace = TR_TraceRayFilterEx(vOrigin, EndPoint, MASK_SHOT, RayType_EndPoint, TraceEntityFilterPlayer, client);
-
 	if (TR_DidHit(trace))
 	{
 		int target = TR_GetEntityIndex(trace);
@@ -688,8 +678,6 @@ public void CheckTriggerBot(int client, int buttons, float angles[3])
 
 		g_iTicksOnPlayer[client] = 0;
 	}
-	
-	delete trace;
   	
   	if(g_iTriggerBotCount[client] >= g_ConVar_TriggerbotBanThreshold.IntValue)
   	{
