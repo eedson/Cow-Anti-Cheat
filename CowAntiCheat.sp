@@ -18,7 +18,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "CodingCow"
-#define PLUGIN_VERSION "1.14"
+#define PLUGIN_VERSION "1.15"
 
 #include <sourcemod>
 #include <sdktools>
