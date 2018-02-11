@@ -57,3 +57,8 @@ There is a config generated (/cfg/CowAntiCheat/CowAntiCheat.cfg)<br />
 ### Added
 - ProfileChecker Added
 - Steamid Added to logs
+
+## [1.15] - 2018-02-12
+### Added
+- Optimized TraceRays
+- Fixed Bots getting kicked from HourChecker
