@@ -93,7 +93,6 @@ ConVar g_ConVar_MacroEnable;
 ConVar g_ConVar_AutoShootEnable;
 ConVar g_ConVar_InstantDefuseEnable;
 ConVar g_ConVar_PerfectStrafeEnable;
-ConVar g_ConVar_BacktrackFixEnable;
 ConVar g_ConVar_AHKStrafeEnable;
 ConVar g_ConVar_HourCheckEnable;
 ConVar g_ConVar_HourCheckValue;
@@ -135,7 +134,6 @@ public void OnPluginStart()
 	g_ConVar_AutoShootEnable = AutoExecConfig_CreateConVar("ac_autoshoot", "1", "Enable auto-shoot detection (logs to admins) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_ConVar_InstantDefuseEnable = AutoExecConfig_CreateConVar("ac_instantdefuse", "1", "Enable instant defuse detection (logs to admins) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_ConVar_PerfectStrafeEnable = AutoExecConfig_CreateConVar("ac_perfectstrafe", "1", "Enable perfect strafe detection (bans/logs) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	g_ConVar_BacktrackFixEnable = AutoExecConfig_CreateConVar("ac_backtrack", "1", "Enable backtrack elimination (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_ConVar_AHKStrafeEnable = AutoExecConfig_CreateConVar("ac_ahkstrafe", "1", "Enable AHK strafe detection (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_ConVar_HourCheckEnable = AutoExecConfig_CreateConVar("ac_hourcheck", "0", "Enable hour checker (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_ConVar_HourCheckValue = AutoExecConfig_CreateConVar("ac_hourcheck_value", "50", "Minimum amount of playtime a user has to have on CS:GO (Default: 50)");
@@ -462,13 +460,7 @@ public Action OnPlayerRunCmd(int client, int &iButtons, int &iImpulse, float fVe
 	
 	g_iCmdNum[client]++;
 	
-	if(g_ConVar_BacktrackFixEnable.BoolValue)
-	{
-		StopBacktracking(client, tickcount, iButtons);
-		return Plugin_Changed;
-	}
-	else
-		return Plugin_Continue;
+	return Plugin_Continue;
 }
 
 public void CheckAimbot(int client, int buttons, float angles[3], Handle trace)
@@ -890,17 +882,6 @@ public void CheckPerfCount(int client)
 		UTIL_BanClient(client, g_ConVar_PerfectStrafeBanTime.IntValue, "[CowAC] Consistant Perfect Strafes Detected.");
 		g_iStrafeCount[client] = 0;
 	}
-}
-
-public void StopBacktracking(int client, int &tickcount, int buttons)
-{
-	/* Big thanks to Shavit for the help here */
-	if(tickcount < g_iTickCount[client] && (buttons & IN_ATTACK) > 0 && IsPlayerAlive(client))
-	{
-		tickcount = ++g_iTickCount[client];
-	}
-
-	g_iTickCount[client] = tickcount;
 }
 
 public void CheckAHKStrafe(int client, int mouse)
