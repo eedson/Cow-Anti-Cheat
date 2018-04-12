@@ -69,6 +69,7 @@ int g_iMacroCount[MAXPLAYERS + 1];
 int g_iMacroDetectionCount[MAXPLAYERS + 1];
 float g_fJumpStart[MAXPLAYERS + 1];
 float g_fDefuseTime[MAXPLAYERS+1];
+float g_fPlantTime[MAXPLAYERS+1];
 int g_iWallTrace[MAXPLAYERS + 1];
 int g_iStrafeCount[MAXPLAYERS + 1];
 bool turnRight[MAXPLAYERS + 1];
@@ -92,6 +93,7 @@ ConVar g_ConVar_TriggerbotEnable;
 ConVar g_ConVar_MacroEnable;
 ConVar g_ConVar_AutoShootEnable;
 ConVar g_ConVar_InstantDefuseEnable;
+ConVar g_ConVar_InstantPlantEnable;
 ConVar g_ConVar_PerfectStrafeEnable;
 ConVar g_ConVar_AHKStrafeEnable;
 ConVar g_ConVar_HourCheckEnable;
@@ -117,11 +119,15 @@ ConVar g_ConVar_SilentStrafeBanTime;
 ConVar g_ConVar_TriggerbotBanTime;
 ConVar g_ConVar_PerfectStrafeBanTime;
 ConVar g_ConVar_InstantDefuseBanTime;
+ConVar g_ConVar_InstantPlantBanTime;
 
 public void OnPluginStart()
 {
 	HookEvent("bomb_begindefuse", Event_BombBeginDefuse);
 	HookEvent("bomb_defused", Event_BombDefused);
+	
+	HookEvent("bomb_beginplant", Event_BombBeginPlant);
+	HookEvent("bomb_planted", Event_BombPlanted);
 	
 	g_ConVar_AutoBhop = FindConVar("sv_autobunnyhopping");
 	
@@ -133,6 +139,7 @@ public void OnPluginStart()
 	g_ConVar_MacroEnable = AutoExecConfig_CreateConVar("ac_macro", "1", "Enable macro detection (logs to admins) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_ConVar_AutoShootEnable = AutoExecConfig_CreateConVar("ac_autoshoot", "1", "Enable auto-shoot detection (logs to admins) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_ConVar_InstantDefuseEnable = AutoExecConfig_CreateConVar("ac_instantdefuse", "1", "Enable instant defuse detection (logs to admins) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	g_ConVar_InstantPlantEnable = AutoExecConfig_CreateConVar("ac_instantplant", "1", "Enable instant plant detection (logs to admins) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_ConVar_PerfectStrafeEnable = AutoExecConfig_CreateConVar("ac_perfectstrafe", "1", "Enable perfect strafe detection (bans/logs) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_ConVar_AHKStrafeEnable = AutoExecConfig_CreateConVar("ac_ahkstrafe", "1", "Enable AHK strafe detection (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_ConVar_HourCheckEnable = AutoExecConfig_CreateConVar("ac_hourcheck", "0", "Enable hour checker (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
@@ -156,6 +163,7 @@ public void OnPluginStart()
 	g_ConVar_TriggerbotBanTime = AutoExecConfig_CreateConVar("ac_triggerbot_bantime", "0", "Ban time for triggerbot detection (Default: 0)");
 	g_ConVar_PerfectStrafeBanTime = AutoExecConfig_CreateConVar("ac_perfectstrafe_bantime", "0", "Ban time for perfect strafe detection (Default: 0)");
 	g_ConVar_InstantDefuseBanTime = AutoExecConfig_CreateConVar("ac_instantdefuse_bantime", "0", "Ban time for instant defuse detection (Default: 0)");
+	g_ConVar_InstantPlantBanTime = AutoExecConfig_CreateConVar("ac_instantplant_bantime", "0", "Ban time for instant plant detection (Default: 0)");
 	
 	AutoExecConfig_ExecuteFile();
 	AutoExecConfig_CleanFile();
@@ -397,6 +405,34 @@ public Action Event_BombDefused(Handle event, const char[] name, bool dontBroadc
 		CowAC_Log(log);
 
 		UTIL_BanClient(client, g_ConVar_InstantDefuseBanTime.IntValue, "[CowAC] Instant Defuse Detected.");
+    }
+}
+
+public Action Event_BombBeginPlant(Handle event, const char[] name, bool dontBroadcast )
+{
+	int client = GetClientOfUserId(GetEventInt(event, "userid"));
+	
+	if(g_ConVar_InstantPlantEnable.BoolValue)
+    {
+        g_fPlantTime[client] = GetEngineTime();
+    }
+}
+
+public Action Event_BombPlanted(Handle event, const char[] name, bool dontBroadcast )
+{
+	int client = GetClientOfUserId(GetEventInt(event, "userid"));
+	
+	if(GetEngineTime() - g_fPlantTime[client] < 2.0 && g_ConVar_InstantPlantEnable.BoolValue)
+	{
+		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for Instant Plant!", client);
+		
+		char date[32], log[128], steamid[64];
+		GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
+		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
+		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Instant Plant", date, client, steamid);
+		CowAC_Log(log);
+
+		UTIL_BanClient(client, g_ConVar_InstantPlantBanTime.IntValue, "[CowAC] Instant Plant Detected.");
     }
 }
 
@@ -1052,6 +1088,7 @@ public void SetDefaults(int client)
 	g_iMacroDetectionCount[client] = 0;
 	g_fJumpStart[client] = 0.0;
 	g_fDefuseTime[client] = 0.0;
+	g_fPlantTime[client] = 0.0;
 	g_Sensitivity[client] = 0.0;
 	g_mYaw[client] = 0.0;
 	g_iWallTrace[client] = 0;
