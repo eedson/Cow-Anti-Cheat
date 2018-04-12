@@ -14,7 +14,6 @@ This plugin is designed to be a drag and drop anti-cheat. While making and testi
     AutoShoot
     Instant Defuse
     Perfect Strafe
-    Backtrack Elimination
     AHK/MSL Strafe
     HourChecker (Kicks Private Profiles)
     ProfileChecker
@@ -62,3 +61,7 @@ There is a config generated (/cfg/CowAntiCheat/CowAntiCheat.cfg)<br />
 ### Added
 - Optimized TraceRays
 - Fixed Bots getting kicked from HourChecker
+
+## [1.16] - 2018-04-12
+### Added
+- Removed Air-Stuck Issue
