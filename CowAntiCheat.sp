@@ -1,20 +1,20 @@
 /*  [CS:GO] CowAntiCheat Plugin - Burn the cheaters!
  *
  *  Copyright (C) 2018 Eric Edson // ericedson.me // thefraggingcow@gmail.com
- * 
+ *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
- * Software Foundation, either version 3 of the License, or (at your option) 
+ * Software Foundation, either version 3 of the License, or (at your option)
  * any later version.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT 
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
  * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with 
+ * You should have received a copy of the GNU General Public License along with
  * this program. If not, see http://www.gnu.org/licenses/.
  */
- 
+
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "CodingCow"
@@ -25,11 +25,11 @@
 #include <autoexecconfig>
 #include <SteamWorks>
 #undef REQUIRE_PLUGIN
-#include <sourcebans>
+#include <sourcebanspp>
 
 #pragma newdecls required
 
-public Plugin myinfo = 
+public Plugin myinfo =
 {
 	name = "CowAntiCheat",
 	author = PLUGIN_AUTHOR,
@@ -39,6 +39,7 @@ public Plugin myinfo =
 };
 
 bool sourcebans = false;
+bool sourcebanspp = false;
 
 #define JUMP_HISTORY 30
 
@@ -122,9 +123,9 @@ public void OnPluginStart()
 {
 	HookEvent("bomb_begindefuse", Event_BombBeginDefuse);
 	HookEvent("bomb_defused", Event_BombDefused);
-	
+
 	g_ConVar_AutoBhop = FindConVar("sv_autobunnyhopping");
-	
+
 	AutoExecConfig_SetFile("CowAntiCheat", "CowAntiCheat");
 	g_ConVar_AimbotEnable = AutoExecConfig_CreateConVar("ac_aimbot", "1", "Enable aimbot detection (bans) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_ConVar_BhopEnable = AutoExecConfig_CreateConVar("ac_bhop", "1", "Enable bhop detection (bans) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
@@ -138,7 +139,7 @@ public void OnPluginStart()
 	g_ConVar_HourCheckEnable = AutoExecConfig_CreateConVar("ac_hourcheck", "0", "Enable hour checker (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_ConVar_HourCheckValue = AutoExecConfig_CreateConVar("ac_hourcheck_value", "50", "Minimum amount of playtime a user has to have on CS:GO (Default: 50)");
 	g_ConVar_ProfileCheckEnable = AutoExecConfig_CreateConVar("ac_profilecheck", "0", "Enable profile checker, this makes it so users need to have a public profile to connect. (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	
+
 	g_ConVar_AimbotBanThreshold = AutoExecConfig_CreateConVar("ac_aimbot_ban_threshold", "5", "Threshold for aimbot ban detection (Default: 5)");
 	g_ConVar_BhopBanThreshold = AutoExecConfig_CreateConVar("ac_bhop_ban_threshold", "10", "Threshold for bhop ban detection (Default: 10)");
 	g_ConVar_SilentStrafeBanThreshold = AutoExecConfig_CreateConVar("ac_silentstrafe_ban_threshold", "10", "Threshold for silent-strafe ban detection (Default: 10)");
@@ -149,54 +150,54 @@ public void OnPluginStart()
 	g_ConVar_PerfectStrafeBanThreshold = AutoExecConfig_CreateConVar("ac_perfectstrafe_ban_threshold", "15", "Threshold for perfect strafe ban detection (Default: 15)");
 	g_ConVar_PerfectStrafeLogThreshold = AutoExecConfig_CreateConVar("ac_perfectstrafe_log_threshold", "10", "Threshold for perfect strafe log detection (Default: 10)");
 	g_ConVar_AHKStrafeLogThreshold = AutoExecConfig_CreateConVar("ac_ahkstrafe_log_threshold", "25", "Threshold for AHK strafe log detection (Default: 25)");
-	
+
 	g_ConVar_AimbotBanTime = AutoExecConfig_CreateConVar("ac_aimbot_bantime", "0", "Ban time for aimbot detection (Default: 0)");
 	g_ConVar_BhopBanTime = AutoExecConfig_CreateConVar("ac_bhop_bantime", "10080", "Ban time for bhop detection (Default: 10080)");
 	g_ConVar_SilentStrafeBanTime = AutoExecConfig_CreateConVar("ac_silentstrafe_bantime", "0", "Ban time for silent-strafe detection (Default: 0)");
 	g_ConVar_TriggerbotBanTime = AutoExecConfig_CreateConVar("ac_triggerbot_bantime", "0", "Ban time for triggerbot detection (Default: 0)");
 	g_ConVar_PerfectStrafeBanTime = AutoExecConfig_CreateConVar("ac_perfectstrafe_bantime", "0", "Ban time for perfect strafe detection (Default: 0)");
 	g_ConVar_InstantDefuseBanTime = AutoExecConfig_CreateConVar("ac_instantdefuse_bantime", "0", "Ban time for instant defuse detection (Default: 0)");
-	
+
 	AutoExecConfig_ExecuteFile();
 	AutoExecConfig_CleanFile();
-	
+
 	for (int i = 1; i <= MaxClients; i++)
 	{
 		SetDefaults(i);
 	}
-	
+
 	CreateTimer(0.1, getSettings, _, TIMER_REPEAT);
-	
+
 	RegConsoleCmd("sm_cowac_version", printVersion);
 	RegAdminCmd("sm_bhopcheck", getBhop, ADMFLAG_BAN);
 }
 
-public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int err_max)
-{
-	MarkNativeAsOptional("SourceBans_BanPlayer");
-}
-
 public void OnAllPluginsLoaded()
 {
-	sourcebans = LibraryExists("sourcebans");
+  sourcebans = LibraryExists("sourcebans");
+  sourcebanspp = LibraryExists("sourcebans++");
 }
 
 public void OnLibraryRemoved(const char[] name)
 {
-	if(StrEqual(name, "sourcebans"))
-		sourcebans = false;
+  if(StrEqual(name, "sourcebans"))
+    sourcebans = false;
+  if(StrEqual(name, "sourcebans++"))
+    sourcebanspp = false;
 }
 
 public void OnLibraryAdded(const char[] name)
 {
-	if(StrEqual(name, "sourcebans"))
-		sourcebans = true;
+  if(StrEqual(name, "sourcebans"))
+    sourcebans = true;
+  if(StrEqual(name, "sourcebans++"))
+    sourcebanspp = true;
 }
 
 public void OnClientPutInServer(int client)
 {
 	SetDefaults(client);
-	
+
 	if(IsValidClient(client))
 	{
 		if(g_ConVar_ProfileCheckEnable.BoolValue)
@@ -225,20 +226,20 @@ public Action getBhop(int client, int args)
 		ReplyToCommand(client, "[SM] Usage: sm_bhopcheck <#userid|name>");
 		return Plugin_Handled;
 	}
-	
+
 	char arg[128];
 	GetCmdArg(1, arg, sizeof(arg));
-	
+
 	int target = FindTarget(client, arg, true, false);
-	
+
 	if(!IsValidClient(target))
 	{
 		PrintToChat(client, "[\x02CowAC\x01] Not a valid target!");
 		return Plugin_Handled;
 	}
-	
+
 	PrintToChat(client, "[\x02CowAC\x01] See console for output.");
-	
+
 	PrintToConsole(client, "--------------------------------------------");
 	PrintToConsole(client, "	%N's Detection Logs", target);
 	PrintToConsole(client, "--------------------------------------------");
@@ -273,9 +274,9 @@ public Action getBhop(int client, int args)
 	g_iLastJumps[target][27],
 	g_iLastJumps[target][28],
 	g_iLastJumps[target][29]);
-	
+
 	int perf = 0;
-	
+
 	for (int i = 0; i < JUMP_HISTORY; i++)
 	{
 		if(g_iLastJumps[target][i] == 1)
@@ -283,11 +284,11 @@ public Action getBhop(int client, int args)
 			perf++;
 		}
 	}
-	
+
 	float avgPerf = perf / 30.0;
-	
+
 	PrintToConsole(client, "Avg Perfect Jumps: %.2f%", avgPerf * 100);
-	
+
 	PrintToConsole(client, "Jump Commands: %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i",
 	g_iJumpsSent[target][0],
 	g_iJumpsSent[target][1],
@@ -319,17 +320,17 @@ public Action getBhop(int client, int args)
 	g_iJumpsSent[target][27],
 	g_iJumpsSent[target][28],
 	g_iJumpsSent[target][29]);
-	
+
 	int jumps = 0;
 	for (int i = 0; i < JUMP_HISTORY; i++)
 	{
 		jumps += g_iJumpsSent[target][i];
 	}
-	
+
 	float avgJumps = jumps / 30.0;
-	
+
 	PrintToConsole(client, "Avg Jump Commands: %.2f", avgJumps);
-	
+
 	return Plugin_Handled;
 }
 
@@ -369,13 +370,13 @@ public void ConVar_QueryClient(QueryCookie cookie, int client, ConVarQueryResult
 					g_bAutoBhopEnabled[client] = false;
 			}
 		}
-	}      
+	}
 }
 
 public Action Event_BombBeginDefuse(Handle event, const char[] name, bool dontBroadcast )
 {
 	int client = GetClientOfUserId( GetEventInt( event, "userid" ) );
-	
+
 	if(g_ConVar_InstantDefuseEnable.BoolValue)
     {
         g_fDefuseTime[client] = GetEngineTime();
@@ -385,11 +386,11 @@ public Action Event_BombBeginDefuse(Handle event, const char[] name, bool dontBr
 public Action Event_BombDefused(Handle event, const char[] name, bool dontBroadcast )
 {
 	int client = GetClientOfUserId( GetEventInt( event, "userid" ) );
-	
+
 	if(GetEngineTime() - g_fDefuseTime[client] < 3.5 && g_ConVar_InstantDefuseEnable.BoolValue)
     {
 		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for Instant Defuse!", client);
-		
+
 		char date[32], log[128], steamid[64];
 		GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
@@ -405,48 +406,48 @@ public Action OnPlayerRunCmd(int client, int &iButtons, int &iImpulse, float fVe
 	if(!IsFakeClient(client) && IsValidClient(client) && IsPlayerAlive(client))
 	{
 		float vOrigin[3], AnglesVec[3], EndPoint[3];
-	
+
 		float Distance = 999999.0;
-		
+
 		GetClientEyePosition(client,vOrigin);
 		GetAngleVectors(fAngles, AnglesVec, NULL_VECTOR, NULL_VECTOR);
-		
+
 		EndPoint[0] = vOrigin[0] + (AnglesVec[0]*Distance);
 		EndPoint[1] = vOrigin[1] + (AnglesVec[1]*Distance);
 		EndPoint[2] = vOrigin[2] + (AnglesVec[2]*Distance);
-		
+
 		Handle trace = TR_TraceRayFilterEx(vOrigin, EndPoint, MASK_SHOT, RayType_EndPoint, TraceEntityFilterPlayer, client);
-		
+
 		if(g_ConVar_AimbotEnable.BoolValue)
 			CheckAimbot(client, iButtons, fAngles, trace);
-		
+
 		if(g_ConVar_BhopEnable.BoolValue && !g_ConVar_AutoBhop.BoolValue && !g_bAutoBhopEnabled[client])
 			CheckBhop(client, iButtons);
-		
+
 		if(g_ConVar_SilentStrafeEnable.BoolValue)
 			CheckSilentStrafe(client, fVelocity[1]);
-		
+
 		if(g_ConVar_TriggerbotEnable.BoolValue)
 			CheckTriggerBot(client, iButtons, trace);
-		
+
 		if(g_ConVar_MacroEnable.BoolValue)
 			CheckMacro(client, iButtons);
-		
+
 		if(g_ConVar_AutoShootEnable.BoolValue)
 			CheckAutoShoot(client, iButtons);
-			
+
 		if(g_ConVar_PerfectStrafeEnable.BoolValue)
 			CheckPerfectStrafe(client, mouse[0], iButtons);
-			
+
 		if(g_ConVar_AHKStrafeEnable.BoolValue)
 			CheckAHKStrafe(client, mouse[0]);
-		
+
 		//CheckWallTrace(client, fAngles);
-		
+
 		delete trace;
-		
+
 		prev_OnGround[client] = (GetEntityFlags(client) & FL_ONGROUND) == FL_ONGROUND;
-		
+
 		prev_angles[client] = fAngles;
 		prev_buttons[client] = iButtons;
 	}
@@ -454,12 +455,12 @@ public Action OnPlayerRunCmd(int client, int &iButtons, int &iImpulse, float fVe
 	{
 		for (int f = 0; f < sizeof(prev_angles[]); f++)
 			prev_angles[client][f] = 0.0;
-			
+
 		g_bAngleSet[client] = false;
 	}
-	
+
 	g_iCmdNum[client]++;
-	
+
 	return Plugin_Continue;
 }
 
@@ -470,24 +471,24 @@ public void CheckAimbot(int client, int buttons, float angles[3], Handle trace)
 	{
 		return;
 	}
-	
+
 	if(!g_bAngleSet[client])
 	{
 		g_bAngleSet[client] = true;
 	}
-	
+
 	float delta = NormalizeAngle(angles[1] - prev_angles[client][1]);
 
 	if (TR_DidHit(trace))
 	{
 		int target = TR_GetEntityIndex(trace);
-		
+
 		if ((target > 0) && (target <= MaxClients) && GetClientTeam(target) != GetClientTeam(client) && IsPlayerAlive(target) && IsPlayerAlive(client))
 		{
 			if(delta > 15.0 || delta < -15.0)
 			{
 				int hitgroup = TR_GetHitGroup(trace);
-				
+
 				if(buttons & IN_ATTACK && hitgroup == g_iLastHitGroup[client])
 				{
 					g_iAimbotCount[client]++;
@@ -496,23 +497,23 @@ public void CheckAimbot(int client, int buttons, float angles[3], Handle trace)
 				{
 					g_iAimbotCount[client] = 0;
 				}
-				
+
 				g_iLastHitGroup[client] = hitgroup;
 			}
 		}
 	}
-  	
+
   	if(g_iAimbotCount[client] >= g_ConVar_AimbotBanThreshold.IntValue)
   	{
   		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for Aimbot!", client);
-  		
+
   		char date[32], log[128], steamid[64];
   		GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
 		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Aimbot (%i)", date, client, steamid, g_iAimbotCount[client]);
 		CowAC_Log(log);
-  		
-  		UTIL_BanClient(client, g_ConVar_AimbotBanTime.IntValue, "[CowAC] Aimbot Detected.");  		
+
+  		UTIL_BanClient(client, g_ConVar_AimbotBanTime.IntValue, "[CowAC] Aimbot Detected.");
   		g_iAimbotCount[client] = 0;
  	}
 }
@@ -527,39 +528,39 @@ public void CheckBhop(int client, int buttons)
 	{
 		g_iTicksOnGround[client] = 0;
 	}
-	
+
 	if(g_iTicksOnGround[client] <= 20 && GetEntityFlags(client) & FL_ONGROUND && buttons & IN_JUMP && !(prev_buttons[client] & IN_JUMP))
 	{
 		g_iLastJumps[client][g_iLastJumpIndex[client]] = g_iTicksOnGround[client];
-		
+
 		g_iLastJumpIndex[client]++;
 	}
-	
+
 	if(g_iLastJumpIndex[client] == 30)
 			g_iLastJumpIndex[client] = 0;
-	
+
 	if((g_iTicksOnGround[client] == 1 || g_iTicksOnGround[client] == g_iPrev_TicksOnGround[client]) && GetEntityFlags(client) & FL_ONGROUND && buttons & IN_JUMP && !(prev_buttons[client] & IN_JUMP))
 	{
 		g_iPerfectBhopCount[client]++;
-		
+
 		g_iPrev_TicksOnGround[client] = g_iTicksOnGround[client];
 	}
 	else if(g_iTicksOnGround[client] >= g_iPrev_TicksOnGround[client] && GetEntityFlags(client) & FL_ONGROUND)
 	{
 		g_iPerfectBhopCount[client] = 0;
 	}
-	
+
 	if(g_iPerfectBhopCount[client] >= g_ConVar_BhopBanThreshold.IntValue)
 	{
 		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for Bhop Assist!", client);
-		
+
 		char date[32], log[128], steamid[64];
 		GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
 		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Bhop Assist (%i)", date, client, steamid, g_iPerfectBhopCount[client]);
 		CowAC_Log(log);
-		
-		UTIL_BanClient(client, g_ConVar_BhopBanTime.IntValue, "[CowAC] Bhop Assist Detected.");		
+
+		UTIL_BanClient(client, g_ConVar_BhopBanTime.IntValue, "[CowAC] Bhop Assist Detected.");
 		g_iPerfectBhopCount[client] = 0;
 	}
 }
@@ -569,22 +570,22 @@ public void CheckSilentStrafe(int client, float sidemove)
 	if(sidemove > 0 && prev_sidemove[client] < 0)
 	{
 		g_iPerfSidemove[client]++;
-		
+
 		if(g_iCmdNum[client] % 50 == 1)
 			CheckSidemoveCount(client);
 	}
 	else if(sidemove < 0 && prev_sidemove[client] > 0)
 	{
 		g_iPerfSidemove[client]++;
-		
+
 		if(g_iCmdNum[client] % 50 == 1)
 			CheckSidemoveCount(client);
 	}
 	else
-	{	
+	{
 		g_iPerfSidemove[client] = 0;
 	}
-	
+
 	prev_sidemove[client] = sidemove;
 }
 
@@ -593,7 +594,7 @@ public void CheckSidemoveCount(int client)
 	if(g_iPerfSidemove[client] >= g_ConVar_SilentStrafeBanThreshold.IntValue)
 	{
 		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for Silent-Strafe!", client);
-		
+
 		char date[32], log[128], steamid[64];
 		GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
@@ -602,7 +603,7 @@ public void CheckSidemoveCount(int client)
 
 		UTIL_BanClient(client, g_ConVar_SilentStrafeBanTime.IntValue, "[CowAC] Silent-Strafe Detected.");
 	}
-			
+
 	g_iPerfSidemove[client] = 0;
 }
 
@@ -611,11 +612,11 @@ public void CheckTriggerBot(int client, int buttons, Handle trace)
 	if (TR_DidHit(trace))
 	{
 		int target = TR_GetEntityIndex(trace);
-		
+
 		if (target > 0 && target <= MaxClients && GetClientTeam(target) != GetClientTeam(client) && IsPlayerAlive(target) && IsPlayerAlive(client) && !g_bShootSpam[client])
 		{
 			g_iTicksOnPlayer[client]++;
-			
+
 			if(buttons & IN_ATTACK && !(prev_buttons[client] & IN_ATTACK) && g_iTicksOnPlayer[client] == g_iPrev_TicksOnPlayer[client])
 			{
 				g_iTriggerBotCount[client]++;
@@ -627,14 +628,14 @@ public void CheckTriggerBot(int client, int buttons, Handle trace)
 					char message[128];
 					Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01detected for \x10%i\x01 tick perfect shots.", client, g_iTriggerBotCount[client]);
 					PrintToAdmins(message);
-					
+
 					char date[32], log[128], steamid[64];
 					GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 					FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
 					Format(log, sizeof(log), "[CowAC] %s | LOG | %N (%s) has been detected for %i 1 tick perfect shots", date, client, steamid, g_iTriggerBotCount[client]);
 					CowAC_Log(log);
 				}
-				
+
 				g_iTriggerBotCount[client] = 0;
 			}
 			else if(!(buttons & IN_ATTACK) && !(prev_buttons[client] & IN_ATTACK) && g_iTicksOnPlayer[client] >= g_iPrev_TicksOnPlayer[client])
@@ -644,14 +645,14 @@ public void CheckTriggerBot(int client, int buttons, Handle trace)
 					char message[128];
 					Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01detected for \x10%i\x01 tick perfect shots.", client, g_iTriggerBotCount[client]);
 					PrintToAdmins(message);
-					
+
 					char date[32], log[128], steamid[64];
 					GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 					FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
 					Format(log, sizeof(log), "[CowAC] %s | LOG | %N (%s) has been detected for %i 1 tick perfect shots", date, client, steamid, g_iTriggerBotCount[client]);
 					CowAC_Log(log);
 				}
-				
+
 				g_iTriggerBotCount[client] = 0;
 			}
 		}
@@ -659,7 +660,7 @@ public void CheckTriggerBot(int client, int buttons, Handle trace)
 		{
 			if(g_iTicksOnPlayer[client] > 0)
 				g_iPrev_TicksOnPlayer[client] = g_iTicksOnPlayer[client];
-			
+
 			g_iTicksOnPlayer[client] = 0;
 		}
 	}
@@ -670,18 +671,18 @@ public void CheckTriggerBot(int client, int buttons, Handle trace)
 
 		g_iTicksOnPlayer[client] = 0;
 	}
-  	
+
   	if(g_iTriggerBotCount[client] >= g_ConVar_TriggerbotBanThreshold.IntValue)
   	{
   		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for TriggerBot / Smooth Aimbot!", client);
-  		
+
   		char date[32], log[128], steamid[64];
   		GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
 		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for TriggerBot / Smooth Aimbot (%i)", date, client, steamid, g_iTriggerBotCount[client]);
 		CowAC_Log(log);
 
-		UTIL_BanClient(client, g_ConVar_TriggerbotBanTime.IntValue, "[CowAC] TriggerBot / Smooth Aimbot Detected.");      	
+		UTIL_BanClient(client, g_ConVar_TriggerbotBanTime.IntValue, "[CowAC] TriggerBot / Smooth Aimbot Detected.");
   		g_iTriggerBotCount[client] = 0;
  	}
 }
@@ -690,7 +691,7 @@ public void CheckMacro(int client, int buttons)
 {
 	float vec[3];
 	GetClientAbsOrigin(client, vec);
-	
+
 	if(buttons & IN_JUMP && !(prev_buttons[client] & IN_JUMP) && !(GetEntityFlags(client) & FL_ONGROUND) && !(GetEntityFlags(client) & FL_INWATER) && vec[2] > g_fJumpStart[client])
 	{
 		g_iMacroCount[client]++;
@@ -702,45 +703,45 @@ public void CheckMacro(int client, int buttons)
 			char message[128];
 			Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01has been detected for Macro / Hyperscroll (\x04%i\x01)!", client, g_iMacroCount[client]);
 			PrintToAdmins(message);
-			
+
 			char date[32], log[128], steamid[64];
 			GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 			FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
 			Format(log, sizeof(log), "[CowAC] %s | LOG | %N (%s) has been detected for Macro / Hyperscroll (%i)", date, client, steamid, g_iMacroCount[client]);
 			CowAC_Log(log);
-			
+
 			g_iMacroDetectionCount[client]++;
-			
+
 			if(g_iMacroDetectionCount[client] >= 10)
 			{
 				KickClient(client, "[CowAC] Turn off Bhop Assistance!");
 				g_iMacroDetectionCount[client] = 0;
 			}
 		}
-		
+
 		if(g_iMacroCount[client] > 0)
-		{	
+		{
 			g_iJumpsSent[client][g_iJumpsSentIndex[client]] = g_iMacroCount[client];
 			g_iJumpsSentIndex[client]++;
-			
+
 			if(g_iJumpsSentIndex[client] == 30)
 				g_iJumpsSentIndex[client] = 0;
 		}
-			
+
 		g_iMacroCount[client] = 0;
-		
+
 		g_fJumpStart[client] = vec[2];
 	}
 }
 
 public void CheckAutoShoot(int client, int buttons)
-{	
+{
 	if(buttons & IN_ATTACK && !(prev_buttons[client] & IN_ATTACK))
 	{
 		if(g_bFirstShot[client])
-		{	
+		{
 			g_bFirstShot[client] = false;
-			
+
 			g_iLastShotTick[client] = g_iCmdNum[client];
 		}
 		else if(g_iCmdNum[client] - g_iLastShotTick[client] <= 10 && !g_bFirstShot[client])
@@ -756,14 +757,14 @@ public void CheckAutoShoot(int client, int buttons)
 				char message[128];
 				Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01has been detected for AutoShoot Script (\x04%i\x01)!", client, g_iAutoShoot[client]);
 				PrintToAdmins(message);
-				
+
 				char date[32], log[128], steamid[64];
 				GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 				FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
 				Format(log, sizeof(log), "[CowAC] %s | LOG | %N (%s) has been detected for AutoShoot Script (%i)", date, client, steamid, g_iAutoShoot[client]);
 				CowAC_Log(log);
 			}
-			
+
 			g_iAutoShoot[client] = 0;
 			g_bShootSpam[client] = false;
 			g_bFirstShot[client] = true;
@@ -776,13 +777,13 @@ public void CheckWallTrace(int client, float angles[3])
 	float vOrigin[3], AnglesVec[3];
 	GetClientEyePosition(client,vOrigin);
 	GetClientEyeAngles(client, AnglesVec);
-	    
+
 	Handle trace = TR_TraceRayFilterEx(vOrigin, AnglesVec, MASK_SHOT, RayType_Infinite, TraceRayDontHitSelf, client);
-	
+
 	if (TR_DidHit(trace))
 	{
 		int target = TR_GetEntityIndex(trace);
-		
+
 		if ((target > 0) && (target <= MaxClients) && GetClientTeam(target) != GetClientTeam(client) && IsPlayerAlive(target) && IsPlayerAlive(client))
 		{
 			g_iWallTrace[client]++;
@@ -797,9 +798,9 @@ public void CheckWallTrace(int client, float angles[3])
 		g_iWallTrace[client] = 0;
 	}
 	delete trace;
-	
+
 	float tickrate = 1.0 / GetTickInterval();
-	
+
 	if(g_iWallTrace[client] >= RoundToZero(tickrate))
 	{
 		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01detected for WallTracing.", client);
@@ -814,7 +815,7 @@ public void CheckPerfectStrafe(int client, int mousedx, int buttons)
 		if(!(prev_buttons[client] & IN_MOVERIGHT) && buttons & IN_MOVERIGHT && !(buttons & IN_MOVELEFT))
 		{
 			g_iStrafeCount[client]++;
-			
+
 			CheckPerfCount(client);
 		}
 		else
@@ -824,17 +825,17 @@ public void CheckPerfectStrafe(int client, int mousedx, int buttons)
 				char message[128];
 				Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01detected for \x10%i\x01 Consistant Perfect Strafes.", client, g_iStrafeCount[client]);
 				PrintToAdmins(message);
-				
+
 				char date[32], log[128], steamid[64];
 				GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 				FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
 				Format(log, sizeof(log), "[CowAC] %s | LOG | %N (%s) has been detected for Consistant Perfect Strafes (%i)", date, client, steamid, g_iStrafeCount[client]);
 				CowAC_Log(log);
 			}
-			
+
 			g_iStrafeCount[client] = 0;
 		}
-		
+
 		turnRight[client] = false;
 	}
 	else if(mousedx < 0 && !turnRight[client])
@@ -842,7 +843,7 @@ public void CheckPerfectStrafe(int client, int mousedx, int buttons)
 		if(!(prev_buttons[client] & IN_MOVELEFT) && buttons & IN_MOVELEFT && !(buttons & IN_MOVERIGHT))
 		{
 			g_iStrafeCount[client]++;
-			
+
 			CheckPerfCount(client);
 		}
 		else
@@ -852,17 +853,17 @@ public void CheckPerfectStrafe(int client, int mousedx, int buttons)
 				char message[128];
 				Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01detected for \x10%i\x01 Consistant Perfect Strafes.", client, g_iStrafeCount[client]);
 				PrintToAdmins(message);
-				
+
 				char date[32], log[128], steamid[64];
 				GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 				FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
 				Format(log, sizeof(log), "[CowAC] %s | LOG | %N (%s) has been detected for Consistant Perfect Strafes (%i)", date, client, steamid, g_iStrafeCount[client]);
 				CowAC_Log(log);
 			}
-			
+
 			g_iStrafeCount[client] = 0;
 		}
-		
+
 		turnRight[client] = true;
 	}
 }
@@ -872,13 +873,13 @@ public void CheckPerfCount(int client)
 	if(g_iStrafeCount[client] >= g_ConVar_PerfectStrafeBanThreshold.IntValue)
 	{
 		PrintToChatAll("[\x02CowAC\x01] \x0E%N \x01has been detected for Consistant Perfect Strafes (%i)!", client, g_iStrafeCount[client]);
-		
+
 		char date[32], log[128], steamid[64];
 		GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 		FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
 		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Consistant Perfect Strafes (%i)", date, client, steamid, g_iStrafeCount[client]);
 		CowAC_Log(log);
-		
+
 		UTIL_BanClient(client, g_ConVar_PerfectStrafeBanTime.IntValue, "[CowAC] Consistant Perfect Strafes Detected.");
 		g_iStrafeCount[client] = 0;
 	}
@@ -888,12 +889,12 @@ public void CheckAHKStrafe(int client, int mouse)
 {
 	float vec[3];
 	GetClientAbsOrigin(client, vec);
-	
+
 	if(prev_OnGround[client] && !(GetEntityFlags(client) & FL_ONGROUND))
 	{
 		g_fJumpPos[client] = vec[2];
 	}
-	
+
 	if(!(GetEntityFlags(client) & FL_ONGROUND))
 	{
 		if((mouse >= 10 || mouse <= -10) && g_fJumpPos[client] < vec[2])
@@ -907,18 +908,18 @@ public void CheckAHKStrafe(int client, int mouse)
 				g_iMousedx_Value[client] = mouse;
 				g_iMousedxCount[client] = 0;
 			}
-				
+
 			if(g_iMousedxCount[client] >= g_ConVar_AHKStrafeLogThreshold.IntValue)
 			{
 				g_iMousedxCount[client] = 0;
 				g_iAHKStrafeDetection[client]++;
-				
+
 				if(g_iAHKStrafeDetection[client] >= 10)
 				{
 					char message[128];
 					Format(message, sizeof(message), "[\x02CowAC\x01] \x0E%N \x01detected for AHK Strafe (%i Infractions)", client, g_iAHKStrafeDetection[client]);
 					PrintToAdmins(message);
-					
+
 					char date[32], log[128], steamid[64];
 					GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
 					FormatTime(date, sizeof(date), "%m/%d/%Y %I:%M:%S", GetTime());
@@ -936,10 +937,10 @@ Handle CreateRequest_TimePlayed(int client)
 	char request_url[256];
 	Format(request_url, sizeof(request_url), "http://www.cowanticheat.com/CheckTime.php");
 	Handle request = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, request_url);
-	
+
 	char steamid[64];
 	GetClientAuthId(client, AuthId_SteamID64, steamid, sizeof(steamid));
-	
+
 	SteamWorks_SetHTTPRequestGetOrPostParameter(request, "steamid", steamid);
 	SteamWorks_SetHTTPRequestContextValue(request, client);
 	SteamWorks_SetHTTPCallbacks(request, TimePlayed_OnHTTPResponse);
@@ -956,12 +957,12 @@ public int TimePlayed_OnHTTPResponse(Handle request, bool bFailure, bool bReques
 
 	int iBufferSize;
 	SteamWorks_GetHTTPResponseBodySize(request, iBufferSize);
-	
+
 	char[] sBody = new char[iBufferSize];
 	SteamWorks_GetHTTPResponseBodyData(request, sBody, iBufferSize);
-	
+
 	int time = StringToInt(sBody, 10) / 60 / 60;
-	
+
 	if(time <= 0)
 	{
 		KickClient(client, "[CowAC] Please connect with a public steam profile.");
@@ -970,7 +971,7 @@ public int TimePlayed_OnHTTPResponse(Handle request, bool bFailure, bool bReques
 	{
 		KickClient(client, "[CowAC] You do not meet the minimum hour requirement to play here! (%i/%i)", time, g_ConVar_HourCheckValue.IntValue);
 	}
-	
+
 	delete request;
 }
 
@@ -979,10 +980,10 @@ Handle CreateRequest_ProfileStatus(int client)
 	char request_url[256];
 	Format(request_url, sizeof(request_url), "http://www.cowanticheat.com/CheckProfile.php");
 	Handle request = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, request_url);
-	
+
 	char steamid[64];
 	GetClientAuthId(client, AuthId_SteamID64, steamid, sizeof(steamid));
-	
+
 	SteamWorks_SetHTTPRequestGetOrPostParameter(request, "steamid", steamid);
 	SteamWorks_SetHTTPRequestContextValue(request, client);
 	SteamWorks_SetHTTPCallbacks(request, ProfileStatus_OnHTTPResponse);
@@ -999,17 +1000,17 @@ public int ProfileStatus_OnHTTPResponse(Handle request, bool bFailure, bool bReq
 
 	int iBufferSize;
 	SteamWorks_GetHTTPResponseBodySize(request, iBufferSize);
-	
+
 	char[] sBody = new char[iBufferSize];
 	SteamWorks_GetHTTPResponseBodyData(request, sBody, iBufferSize);
-	
+
 	int profile = StringToInt(sBody, 10) / 60 / 60;
-	
+
 	if(profile < 3)
 	{
 		KickClient(client, "[CowAC] Please connect with a public steam profile.");
 	}
-	
+
 	delete request;
 }
 
@@ -1024,7 +1025,7 @@ public bool TraceRayDontHitSelf(int entity, int mask, any data)
 		return false;
 	else
     	return entity != data && 0 < entity <= MaxClients;
-}  
+}
 
 public void SetDefaults(int client)
 {
@@ -1064,7 +1065,7 @@ public void SetDefaults(int client)
 	g_iMousedxCount[client] = 0;
 	g_fJumpPos[client] = 0.0;
 	prev_OnGround[client] = true;
-	
+
 	for (int i = 0; i < JUMP_HISTORY; i++)
 	{
 		g_iLastJumps[client][i] = 0;
@@ -1077,13 +1078,13 @@ public void SetDefaults(int client)
 /* Stocks */
 public void PrintToAdmins(const char[] message)
 {
-    for (int i = 1; i <= MaxClients; i++) 
+    for (int i = 1; i <= MaxClients; i++)
     {
         if (IsValidClient(i))
         {
             if (CheckCommandAccess(i, "cowac_print_override", ADMFLAG_GENERIC))
             {
-                PrintToChat(i, message); 
+                PrintToChat(i, message);
             }
             else
             {
@@ -1093,11 +1094,11 @@ public void PrintToAdmins(const char[] message)
     }
 }
 
-public void PrintToCow(int client, const char[] message) 
+public void PrintToCow(int client, const char[] message)
 {
 	char steamid[64];
 	GetClientAuthId(client, AuthId_Steam2, steamid, sizeof(steamid));
-	
+
 	if(StrEqual(steamid, "STEAM_1:1:240063362"))
 	{
 		PrintToChat(client, message);
@@ -1131,29 +1132,31 @@ public float NormalizeAngle(float angle)
 public float GetClientVelocity(int client, bool UseX, bool UseY, bool UseZ)
 {
     float vVel[3];
-   
+
     if(UseX)
     {
         vVel[0] = GetEntPropFloat(client, Prop_Send, "m_vecVelocity[0]");
     }
-   
+
     if(UseY)
     {
         vVel[1] = GetEntPropFloat(client, Prop_Send, "m_vecVelocity[1]");
     }
-   
+
     if(UseZ)
     {
         vVel[2] = GetEntPropFloat(client, Prop_Send, "m_vecVelocity[2]");
     }
-   
+
     return GetVectorLength(vVel);
 }
 
 void UTIL_BanClient(int iTarget, int iTime, char[] szReason) {
 	if (sourcebans) {
-		SourceBans_BanPlayer(0, iTarget, iTime, szReason);
-	} else {
+		SBBanPlayer(0, iTarget, iTime, szReason);
+	} else if (sourcebanspp) {
+    SBPP_BanPlayer(0, iTarget, iTime, szReason);
+  } else {
 		BanClient(iTarget, iTime, BANFLAG_AUTO, szReason);
 	}
 }
