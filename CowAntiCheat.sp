@@ -19,13 +19,16 @@
 
 #define PLUGIN_AUTHOR "CodingCow"
 #define PLUGIN_VERSION "1.17"
+#define REQUIRE_PLUGIN 0
+#define JUMP_HISTORY 30
+#define SERVER 0
 
 #include <sourcemod>
 #include <sdktools>
-#include <autoexecconfig>
 #include <SteamWorks>
 #undef REQUIRE_PLUGIN
-#include <IsSourcebansLoaded>
+#include <sourcebans>
+#include <sourcebanspp>
 
 #pragma newdecls required
 
@@ -38,48 +41,55 @@ public Plugin myinfo =
 	url = ""
 };
 
-bool IsSourcebansLoaded = false;
+enum BanMethod
+{
+	SourceModBan,
+	SourceBans,
+	SourceBansPP
+}
 
-#define JUMP_HISTORY 30
+BanMethod ban_method = SourceModBan;
+EngineVersion game_engine = Engine_Unknown;
+
+bool g_bAngleSet[MAXPLAYERS + 1];
+bool g_bAutoBhopEnabled[MAXPLAYERS + 1];
+bool g_bShootSpam[MAXPLAYERS + 1];
+bool g_bFirstShot[MAXPLAYERS + 1];
+bool turnRight[MAXPLAYERS + 1];
+bool prev_OnGround[MAXPLAYERS + 1];
 
 int g_iCmdNum[MAXPLAYERS + 1];
 int g_iAimbotCount[MAXPLAYERS + 1];
 int g_iLastHitGroup[MAXPLAYERS + 1];
-bool g_bAngleSet[MAXPLAYERS + 1];
-float prev_angles[MAXPLAYERS + 1][3];
 int g_iPerfectBhopCount[MAXPLAYERS + 1];
-bool g_bAutoBhopEnabled[MAXPLAYERS + 1];
 int g_iTicksOnGround[MAXPLAYERS + 1];
 int g_iLastJumps[MAXPLAYERS + 1][JUMP_HISTORY];
 int g_iLastJumpIndex[MAXPLAYERS + 1];
 int g_iJumpsSent[MAXPLAYERS + 1][JUMP_HISTORY];
 int g_iJumpsSentIndex[MAXPLAYERS + 1];
 int g_iPrev_TicksOnGround[MAXPLAYERS + 1];
-float prev_sidemove[MAXPLAYERS + 1];
-int g_iPerfSidemove[MAXPLAYERS + 1];
-int prev_buttons[MAXPLAYERS + 1];
-bool g_bShootSpam[MAXPLAYERS + 1];
-int g_iLastShotTick[MAXPLAYERS + 1];
-bool g_bFirstShot[MAXPLAYERS + 1];
 int g_iAutoShoot[MAXPLAYERS + 1];
 int g_iTriggerBotCount[MAXPLAYERS + 1];
 int g_iTicksOnPlayer[MAXPLAYERS + 1];
 int g_iPrev_TicksOnPlayer[MAXPLAYERS + 1];
 int g_iMacroCount[MAXPLAYERS + 1];
 int g_iMacroDetectionCount[MAXPLAYERS + 1];
-float g_fJumpStart[MAXPLAYERS + 1];
-float g_fDefuseTime[MAXPLAYERS+1];
 int g_iWallTrace[MAXPLAYERS + 1];
 int g_iStrafeCount[MAXPLAYERS + 1];
-bool turnRight[MAXPLAYERS + 1];
 int g_iTickCount[MAXPLAYERS + 1];
 int prev_mousedx[MAXPLAYERS + 1];
 int g_iAHKStrafeDetection[MAXPLAYERS + 1];
 int g_iMousedx_Value[MAXPLAYERS + 1];
 int g_iMousedxCount[MAXPLAYERS + 1];
-float g_fJumpPos[MAXPLAYERS + 1];
-bool prev_OnGround[MAXPLAYERS + 1];
+int g_iPerfSidemove[MAXPLAYERS + 1];
+int prev_buttons[MAXPLAYERS + 1];
+int g_iLastShotTick[MAXPLAYERS + 1];
 
+float prev_angles[MAXPLAYERS + 1][3];
+float prev_sidemove[MAXPLAYERS + 1];
+float g_fJumpStart[MAXPLAYERS + 1];
+float g_fDefuseTime[MAXPLAYERS+1];
+float g_fJumpPos[MAXPLAYERS + 1];
 float g_Sensitivity[MAXPLAYERS + 1];
 float g_mYaw[MAXPLAYERS + 1];
 
@@ -120,14 +130,12 @@ ConVar sm_cac_triggerbot_bantime = null;
 ConVar sm_cac_perfectstrafe_bantime = null;
 ConVar sm_cac_instantdefuse_bantime = null;
 
-EngineVersion game_engine = Engine_Unknown;
-
 public void OnPluginStart()
 {
 	game_engine = GetEngineVersion();
 
 	for (int i = 1; i <= MaxClients; i++)
-		SetDefaults(i);
+		SetToDefaults(i);
 	
 	CreateTimer(0.1, getSettings, _, TIMER_REPEAT);
 	
@@ -147,36 +155,36 @@ public void SetConVars()
 	if(game_engine == Engine_CSGO)
 		sv_autobunnyhopping = FindConVar("sv_autobunnyhopping");
 	
-	sm_cac_aimbot = CreateConVar("ac_aimbot", "1", "Enable aimbot detection (bans) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	sm_cac_bhop = CreateConVar("ac_bhop", "1", "Enable bhop detection (bans) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	sm_cac_silentstrafe = CreateConVar("ac_silentstrafe", "1", "Enable silent-strafe detection (bans) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	sm_cac_triggerbot = CreateConVar("ac_triggerbot", "1", "Enable triggerbot detection (bans/logs) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	sm_cac_macro = CreateConVar("ac_macro", "1", "Enable macro detection (logs to admins) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	sm_cac_autoshoot = CreateConVar("ac_autoshoot", "1", "Enable auto-shoot detection (logs to admins) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	sm_cac_instantdefuse = CreateConVar("ac_instantdefuse", "1", "Enable instant defuse detection (logs to admins) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	sm_cac_perfectstrafe = CreateConVar("ac_perfectstrafe", "1", "Enable perfect strafe detection (bans/logs) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	sm_cac_ahkstrafe = CreateConVar("ac_ahkstrafe", "1", "Enable AHK strafe detection (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	sm_cac_hourcheck = CreateConVar("ac_hourcheck", "0", "Enable hour checker (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
-	sm_cac_hourcheck_value = CreateConVar("ac_hourcheck_value", "50", "Minimum amount of playtime a user has to have on CS:GO (Default: 50)");
-	sm_cac_profilecheck = CreateConVar("ac_profilecheck", "0", "Enable profile checker, this makes it so users need to have a public profile to connect. (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	sm_cac_aimbot = CreateConVar("sm_cac_aimbot", "1", "Enable aimbot detection (bans) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	sm_cac_bhop = CreateConVar("sm_cac_bhop", "1", "Enable bhop detection (bans) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	sm_cac_silentstrafe = CreateConVar("sm_cac_silentstrafe", "1", "Enable silent-strafe detection (bans) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	sm_cac_triggerbot = CreateConVar("sm_cac_triggerbot", "1", "Enable triggerbot detection (bans/logs) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	sm_cac_macro = CreateConVar("sm_cac_macro", "1", "Enable macro detection (logs to admins) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	sm_cac_autoshoot = CreateConVar("sm_cac_autoshoot", "1", "Enable auto-shoot detection (logs to admins) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	sm_cac_instantdefuse = CreateConVar("sm_cac_instantdefuse", "1", "Enable instant defuse detection (logs to admins) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	sm_cac_perfectstrafe = CreateConVar("sm_cac_perfectstrafe", "1", "Enable perfect strafe detection (bans/logs) (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	sm_cac_ahkstrafe = CreateConVar("sm_cac_ahkstrafe", "1", "Enable AHK strafe detection (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	sm_cac_hourcheck = CreateConVar("sm_cac_hourcheck", "0", "Enable hour checker (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	sm_cac_hourcheck_value = CreateConVar("sm_cac_hourcheck_value", "50", "Minimum amount of playtime a user has to have on CS:GO (Default: 50)");
+	sm_cac_profilecheck = CreateConVar("sm_cac_profilecheck", "0", "Enable profile checker, this makes it so users need to have a public profile to connect. (1 = Yes, 0 = No)", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	
-	sm_cac_aimbot_ban_threshold = CreateConVar("ac_aimbot_ban_threshold", "5", "Threshold for aimbot ban detection (Default: 5)");
-	sm_cac_bhop_ban_threshold = CreateConVar("ac_bhop_ban_threshold", "10", "Threshold for bhop ban detection (Default: 10)");
-	sm_cac_silentstrafe_ban_threshold = CreateConVar("ac_silentstrafe_ban_threshold", "10", "Threshold for silent-strafe ban detection (Default: 10)");
-	sm_cac_triggerbot_ban_threshold = CreateConVar("ac_triggerbot_ban_threshold", "5", "Threshold for triggerbot ban detection (Default: 5)");
-	sm_cac_triggerbot_log_threshold = CreateConVar("ac_triggerbot_log_threshold", "3", "Threshold for triggerbot log detection (Default: 3)");
-	sm_cac_macro_log_threshold = CreateConVar("ac_macro_log_threshold", "20", "Threshold for macro log detection (Default: 20)");
-	sm_cac_autoshoot_log_threshold = CreateConVar("ac_autoshoot_log_threshold", "20", "Threshold for auto-shoot log detection (Default: 20)");
-	sm_cac_perfectstrafe_ban_threshold = CreateConVar("ac_perfectstrafe_ban_threshold", "15", "Threshold for perfect strafe ban detection (Default: 15)");
-	sm_cac_perfectstrafe_log_threshold = CreateConVar("ac_perfectstrafe_log_threshold", "10", "Threshold for perfect strafe log detection (Default: 10)");
-	sm_cac_ahkstrafe_log_threshold = CreateConVar("ac_ahkstrafe_log_threshold", "25", "Threshold for AHK strafe log detection (Default: 25)");
+	sm_cac_aimbot_ban_threshold = CreateConVar("sm_cac_aimbot_ban_threshold", "5", "Threshold for aimbot ban detection (Default: 5)");
+	sm_cac_bhop_ban_threshold = CreateConVar("sm_cac_bhop_ban_threshold", "10", "Threshold for bhop ban detection (Default: 10)");
+	sm_cac_silentstrafe_ban_threshold = CreateConVar("sm_cac_silentstrafe_ban_threshold", "10", "Threshold for silent-strafe ban detection (Default: 10)");
+	sm_cac_triggerbot_ban_threshold = CreateConVar("sm_cac_triggerbot_ban_threshold", "5", "Threshold for triggerbot ban detection (Default: 5)");
+	sm_cac_triggerbot_log_threshold = CreateConVar("sm_cac_triggerbot_log_threshold", "3", "Threshold for triggerbot log detection (Default: 3)");
+	sm_cac_macro_log_threshold = CreateConVar("sm_cac_macro_log_threshold", "20", "Threshold for macro log detection (Default: 20)");
+	sm_cac_autoshoot_log_threshold = CreateConVar("sm_cac_autoshoot_log_threshold", "20", "Threshold for auto-shoot log detection (Default: 20)");
+	sm_cac_perfectstrafe_ban_threshold = CreateConVar("sm_cac_perfectstrafe_ban_threshold", "15", "Threshold for perfect strafe ban detection (Default: 15)");
+	sm_cac_perfectstrafe_log_threshold = CreateConVar("sm_cac_perfectstrafe_log_threshold", "10", "Threshold for perfect strafe log detection (Default: 10)");
+	sm_cac_ahkstrafe_log_threshold = CreateConVar("sm_cac_ahkstrafe_log_threshold", "25", "Threshold for AHK strafe log detection (Default: 25)");
 	
-	sm_cac_aimbot_bantime = CreateConVar("ac_aimbot_bantime", "0", "Ban time for aimbot detection (Default: 0)");
-	sm_cac_bhop_bantime = CreateConVar("ac_bhop_bantime", "10080", "Ban time for bhop detection (Default: 10080)");
-	sm_cac_silentstrafe_bantime = CreateConVar("ac_silentstrafe_bantime", "0", "Ban time for silent-strafe detection (Default: 0)");
-	sm_cac_triggerbot_bantime = CreateConVar("ac_triggerbot_bantime", "0", "Ban time for triggerbot detection (Default: 0)");
-	sm_cac_perfectstrafe_bantime = CreateConVar("ac_perfectstrafe_bantime", "0", "Ban time for perfect strafe detection (Default: 0)");
-	sm_cac_instantdefuse_bantime = CreateConVar("ac_instantdefuse_bantime", "0", "Ban time for instant defuse detection (Default: 0)");
+	sm_cac_aimbot_bantime = CreateConVar("sm_cac_aimbot_bantime", "0", "Ban time for aimbot detection (Default: 0)");
+	sm_cac_bhop_bantime = CreateConVar("sm_cac_bhop_bantime", "10080", "Ban time for bhop detection (Default: 10080)");
+	sm_cac_silentstrafe_bantime = CreateConVar("sm_cac_silentstrafe_bantime", "0", "Ban time for silent-strafe detection (Default: 0)");
+	sm_cac_triggerbot_bantime = CreateConVar("sm_cac_triggerbot_bantime", "0", "Ban time for triggerbot detection (Default: 0)");
+	sm_cac_perfectstrafe_bantime = CreateConVar("sm_cac_perfectstrafe_bantime", "0", "Ban time for perfect strafe detection (Default: 0)");
+	sm_cac_instantdefuse_bantime = CreateConVar("sm_cac_instantdefuse_bantime", "0", "Ban time for instant defuse detection (Default: 0)");
 
 	AutoExecConfig(true, "cowanticheat");
 }
@@ -184,28 +192,48 @@ public void SetConVars()
 public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int err_max)
 {
 	MarkNativeAsOptional("SourceBans_BanPlayer");
+	MarkNativeAsOptional("SBPP_BanPlayer");
 }
 
 public void OnAllPluginsLoaded()
 {
-	IsSourcebansLoaded = LibraryExists("sourcebans");
+	if(LibraryExists("sbpp_main"))
+	{
+		ban_method = SourceBansPP;
+
+		return;
+	}
+
+	if(LibraryExists("sourcebans"))
+	{
+		ban_method = SourceBans;
+
+		return;
+	}	
 }
 
 public void OnLibraryRemoved(const char[] name)
 {
-	if(StrEqual(name, "sourcebans"))
-		IsSourcebansLoaded = false;
+	if(StrEqual(name, "sbpp_main") || StrEqual(name, "sourcebans"))
+		ban_method = SourceModBan;
 }
 
 public void OnLibraryAdded(const char[] name)
 {
+	if(StrEqual(name, "sbpp_main"))
+	{
+		ban_method = SourceBansPP;
+
+		return;
+	}
+
 	if(StrEqual(name, "sourcebans"))
-		IsSourcebansLoaded = true;
+		ban_method = SourceBans;
 }
 
 public void OnClientPutInServer(int client)
 {
-	SetDefaults(client);
+	SetToDefaults(client);
 	
 	if(IsValidClient(client))
 	{
@@ -420,7 +448,7 @@ public Action Event_BombDefused(Handle event, const char[] name, bool dontBroadc
 		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Instant Defuse", date, client, steamid);
 		CowAC_Log(log);
 
-		UTIL_BanClient(client, sm_cac_instantdefuse_bantime.IntValue, "[CowAC] Instant Defuse Detected.");
+		BanPlayer(client, sm_cac_instantdefuse_bantime.IntValue, "[CowAC] Instant Defuse Detected.");
     }
 }
 
@@ -536,7 +564,7 @@ public void CheckAimbot(int client, int buttons, float angles[3], Handle trace)
 		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Aimbot (%i)", date, client, steamid, g_iAimbotCount[client]);
 		CowAC_Log(log);
   		
-  		UTIL_BanClient(client, sm_cac_aimbot_bantime.IntValue, "[CowAC] Aimbot Detected.");  		
+  		BanPlayer(client, sm_cac_aimbot_bantime.IntValue, "[CowAC] Aimbot Detected.");  		
   		g_iAimbotCount[client] = 0;
  	}
 }
@@ -583,7 +611,7 @@ public void CheckBhop(int client, int buttons)
 		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Bhop Assist (%i)", date, client, steamid, g_iPerfectBhopCount[client]);
 		CowAC_Log(log);
 		
-		UTIL_BanClient(client, sm_cac_bhop_bantime.IntValue, "[CowAC] Bhop Assist Detected.");		
+		BanPlayer(client, sm_cac_bhop_bantime.IntValue, "[CowAC] Bhop Assist Detected.");		
 		g_iPerfectBhopCount[client] = 0;
 	}
 }
@@ -624,7 +652,7 @@ public void CheckSidemoveCount(int client)
 		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Silent-Strafe (%i)", date, client, steamid, g_iPerfSidemove[client]);
 		CowAC_Log(log);
 
-		UTIL_BanClient(client, sm_cac_silentstrafe_bantime.IntValue, "[CowAC] Silent-Strafe Detected.");
+		BanPlayer(client, sm_cac_silentstrafe_bantime.IntValue, "[CowAC] Silent-Strafe Detected.");
 	}
 			
 	g_iPerfSidemove[client] = 0;
@@ -705,7 +733,7 @@ public void CheckTriggerBot(int client, int buttons, Handle trace)
 		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for TriggerBot / Smooth Aimbot (%i)", date, client, steamid, g_iTriggerBotCount[client]);
 		CowAC_Log(log);
 
-		UTIL_BanClient(client, sm_cac_triggerbot_bantime.IntValue, "[CowAC] TriggerBot / Smooth Aimbot Detected.");      	
+		BanPlayer(client, sm_cac_triggerbot_bantime.IntValue, "[CowAC] TriggerBot / Smooth Aimbot Detected.");      	
   		g_iTriggerBotCount[client] = 0;
  	}
 }
@@ -903,7 +931,7 @@ public void CheckPerfCount(int client)
 		Format(log, sizeof(log), "[CowAC] %s | BAN | %N (%s) has been detected for Consistant Perfect Strafes (%i)", date, client, steamid, g_iStrafeCount[client]);
 		CowAC_Log(log);
 		
-		UTIL_BanClient(client, sm_cac_perfectstrafe_bantime.IntValue, "[CowAC] Consistant Perfect Strafes Detected.");
+		BanPlayer(client, sm_cac_perfectstrafe_bantime.IntValue, "[CowAC] Consistant Perfect Strafes Detected.");
 		g_iStrafeCount[client] = 0;
 	}
 }
@@ -1044,13 +1072,15 @@ public bool TraceEntityFilterPlayer(int entity, int mask, any data)
 
 public bool TraceRayDontHitSelf(int entity, int mask, any data)
 {
-	if(entity == 0)
+	return entity == 0 ? false : entity != data && 0 < entity <= MaxClients;
+
+	/*if(entity == 0)
 		return false;
 	else
-    	return entity != data && 0 < entity <= MaxClients;
+    	return entity != data && 0 < entity <= MaxClients;*/
 }  
 
-public void SetDefaults(int client)
+public void SetToDefaults(int client)
 {
 	g_iCmdNum[client] = 0;
 	g_iAimbotCount[client] = 0;
@@ -1147,8 +1177,13 @@ bool IsValidClient(int client, bool bAllowBots = false, bool bAllowDead = true)
 public float NormalizeAngle(float angle)
 {
 	float newAngle = angle;
-	while (newAngle <= -180.0) newAngle += 360.0;
-	while (newAngle > 180.0) newAngle -= 360.0;
+
+	while (newAngle <= -180.0)
+		newAngle += 360.0;
+	
+	while (newAngle > 180.0) 
+		newAngle -= 360.0;
+	
 	return newAngle;
 }
 
@@ -1174,16 +1209,23 @@ public float GetClientVelocity(int client, bool UseX, bool UseY, bool UseZ)
     return GetVectorLength(vVel);
 }
 
-void UTIL_BanClient(int client, int time, const char[] reason)
+void BanPlayer(int client, int time, const char[] reason)
 {
-	if (IsSourcebansLoaded) 
+	switch(ban_method)
 	{
-		SourceBans_BanPlayer(0, client, time, reason);
-	} 
-	else 
-	{
-		BanClient(client, time, BANFLAG_AUTO, reason);
+		case default, SourceModBan:
+		{
+			BanClient(client, time, BANFLAG_AUTO, reason);
+		}
+
+		case SourceBans:
+		{
+			SourceBans_BanPlayer(SERVER, client, time, reason);
+		}
+
+		case SourceBansPP: 
+		{
+			SBPP_BanPlayer(SERVER, client, time, reason);
+		}
 	}
 }
-
-
