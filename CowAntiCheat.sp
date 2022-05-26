@@ -25,7 +25,7 @@
 #include <autoexecconfig>
 #include <SteamWorks>
 #undef REQUIRE_PLUGIN
-#include <sourcebans>
+#include <sourcebanspp>
 
 #pragma newdecls required
 
@@ -173,23 +173,23 @@ public void OnPluginStart()
 
 public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int err_max)
 {
-	MarkNativeAsOptional("SourceBans_BanPlayer");
+	MarkNativeAsOptional("SBPP_BanPlayer");
 }
 
 public void OnAllPluginsLoaded()
 {
-	sourcebans = LibraryExists("sourcebans");
+	sourcebans = LibraryExists("sourcebans++");
 }
 
 public void OnLibraryRemoved(const char[] name)
 {
-	if(StrEqual(name, "sourcebans"))
+	if(StrEqual(name, "sourcebans++"))
 		sourcebans = false;
 }
 
 public void OnLibraryAdded(const char[] name)
 {
-	if(StrEqual(name, "sourcebans"))
+	if(StrEqual(name, "sourcebans++"))
 		sourcebans = true;
 }
 
@@ -1152,7 +1152,7 @@ public float GetClientVelocity(int client, bool UseX, bool UseY, bool UseZ)
 
 void UTIL_BanClient(int iTarget, int iTime, char[] szReason) {
 	if (sourcebans) {
-		SourceBans_BanPlayer(0, iTarget, iTime, szReason);
+		SBPP_BanPlayer(0, iTarget, iTime, szReason);
 	} else {
 		BanClient(iTarget, iTime, BANFLAG_AUTO, szReason);
 	}
