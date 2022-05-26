@@ -171,11 +171,6 @@ public void OnPluginStart()
 	RegAdminCmd("sm_bhopcheck", getBhop, ADMFLAG_BAN);
 }
 
-public APLRes AskPluginLoad2(Handle hMyself, bool bLate, char[] sError, int err_max)
-{
-	MarkNativeAsOptional("SBPP_BanPlayer");
-}
-
 public void OnAllPluginsLoaded()
 {
 	sourcebans = LibraryExists("sourcebans++");
